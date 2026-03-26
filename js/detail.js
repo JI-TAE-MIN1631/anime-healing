@@ -1,55 +1,32 @@
 // js/detail.js
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. URL에서 애니메이션 ID(mal_id) 추출하기
     const urlParams = new URLSearchParams(window.location.search);
     const malId = urlParams.get('mal_id');
 
-    // (임시) 만약 mal_id 없이 접속하면 홈으로 돌려보내기
     if (!malId) {
-        alert("잘못된 접근입니다.");
-        window.location.href = 'index.html';
+        showToast("잘못된 접근입니다.", "error");
+        setTimeout(() => { window.location.href = 'index.html'; }, 1000);
         return;
     }
 
-    // 2. 🚀 프론트엔드 확인용 더미 데이터
-    const mockAnimeDetail = {
-        title: "장송의 프리렌",
-        image_url: "https://picsum.photos/300/450?random=3", // 임시 이미지
-        score: 9.1,
-        genres: ["드라마", "판타지", "모험"],
-        synopsis: "마왕을 쓰러뜨린 용사 일행의 마법사 프리렌. 엘프인 그녀에게 인간의 수명은 너무나도 짧다. 용사 힘멜의 죽음을 계기로 인간을 '알기' 위한 그녀의 새로운 여정이 시작된다. 잔잔하면서도 깊은 울림을 주는 웰메이드 판타지.",
-        ai_summary: "대부분의 유저들이 '작화와 연출이 압도적이다', '잔잔하면서도 깊은 감동을 준다'며 극찬하고 있습니다. 특히 시간의 흐름을 표현하는 방식에 대한 호평이 많아, 완성도 높은 드라마를 원하는 분들께 강력 추천하는 분위기입니다.",
-        stats: { avg_score: 9.1, total_reviews: 124 }
-    };
-
-    const mockReviews = [
-        { id: 1, author: "애니매니아", score: 10, content: "올해 최고의 명작입니다. 작화, 브금, 스토리 모두 완벽해요.", date: "2026. 03. 24" },
-        { id: 2, author: "힐링이필요해", score: 9, content: "자극적이지 않아서 오히려 더 여운이 남네요. 추천합니다.", date: "2026. 03. 22" }
-    ];
-
-    // 3. 화면에 데이터 뿌려주기
-    document.getElementById('detail-poster').src = mockAnimeDetail.image_url;
-    document.getElementById('detail-title').innerText = mockAnimeDetail.title;
-    document.getElementById('detail-score').innerText = `⭐ ${mockAnimeDetail.score.toFixed(1)}`;
-    document.getElementById('detail-synopsis').innerText = mockAnimeDetail.synopsis;
-    document.getElementById('detail-ai-summary').innerText = mockAnimeDetail.ai_summary;
-    document.getElementById('stat-avg-score').innerText = mockAnimeDetail.stats.avg_score.toFixed(1);
-    document.getElementById('stat-total-reviews').innerText = mockAnimeDetail.stats.total_reviews;
-
-    // 장르 태그 생성
+    // 화면 요소들
+    const poster = document.getElementById('detail-poster');
+    const title = document.getElementById('detail-title');
+    const score = document.getElementById('detail-score');
+    const synopsis = document.getElementById('detail-synopsis');
+    const aiSummary = document.getElementById('detail-ai-summary');
     const genresWrap = document.getElementById('detail-genres');
-    mockAnimeDetail.genres.forEach(genre => {
-        const span = document.createElement('span');
-        span.className = 'badge genre-badge';
-        span.innerText = genre;
-        genresWrap.appendChild(span);
-    });
-
-    // 4. 리뷰 목록 렌더링 함수
     const reviewList = document.getElementById('review-list');
+    const watchlistBtn = document.getElementById('detail-watchlist-btn');
+
+    // 리뷰 렌더링 함수
     function renderReviews(reviews) {
-        reviewList.innerHTML = ''; // 초기화
+        reviewList.innerHTML = ''; 
+        if (!reviews || reviews.length === 0) {
+            reviewList.innerHTML = '<p style="text-align:center; padding: 20px;">아직 리뷰가 없습니다. 첫 리뷰를 작성해 보세요!</p>';
+            return;
+        }
         reviews.forEach(review => {
             const div = document.createElement('div');
             div.className = 'review-item';
@@ -64,46 +41,82 @@ document.addEventListener('DOMContentLoaded', () => {
             reviewList.appendChild(div);
         });
     }
-    renderReviews(mockReviews);
 
-    // 5. 보고싶다(하트) 버튼 토글 로직
-    const watchlistBtn = document.getElementById('detail-watchlist-btn');
-    watchlistBtn.addEventListener('click', () => {
-        watchlistBtn.classList.toggle('active');
-        if (watchlistBtn.classList.contains('active')) {
-            watchlistBtn.innerHTML = '❤️ 보고싶다 취소';
-        } else {
-            watchlistBtn.innerHTML = '🤍 보고싶다';
+    // 🚀 [수정됨] 백엔드에서 상세 정보 가져오기
+    async function loadDetail() {
+        try {
+            const data = await apiFetch(`/api/anime/${malId}`, 'GET');
+            
+            poster.src = data.image_url || '';
+            title.innerText = data.title || '제목 없음';
+            score.innerText = `⭐ ${data.score ? data.score.toFixed(1) : '0.0'}`;
+            synopsis.innerText = data.synopsis || '줄거리 정보가 없습니다.';
+            aiSummary.innerText = data.ai_summary || 'AI 요약 데이터가 없습니다.';
+            
+            document.getElementById('stat-avg-score').innerText = data.stats?.avg_score || '0.0';
+            document.getElementById('stat-total-reviews').innerText = data.stats?.total_reviews || '0';
+
+            genresWrap.innerHTML = '';
+            (data.genres || []).forEach(genre => {
+                const span = document.createElement('span');
+                span.className = 'badge genre-badge';
+                span.innerText = genre;
+                genresWrap.appendChild(span);
+            });
+
+            renderReviews(data.reviews || []);
+            
+            // 보고싶다 상태 체크
+            if (data.is_watchlisted) {
+                watchlistBtn.classList.add('active');
+                watchlistBtn.innerHTML = '❤️ 보고싶다 취소';
+            }
+
+        } catch (error) {
+            console.error(error);
+            showToast('작품 정보를 불러오지 못했습니다.', 'error');
+        }
+    }
+
+    loadDetail();
+
+    // 보고싶다 버튼 토글 (진짜 API 연동)
+    watchlistBtn.addEventListener('click', async () => {
+        try {
+            if (watchlistBtn.classList.contains('active')) {
+                await apiFetch(`/api/watchlist/${malId}`, 'DELETE');
+                watchlistBtn.classList.remove('active');
+                watchlistBtn.innerHTML = '🤍 보고싶다';
+                showToast('목록에서 취소되었습니다.', 'info');
+            } else {
+                await apiFetch(`/api/watchlist`, 'POST', { mal_id: malId });
+                watchlistBtn.classList.add('active');
+                watchlistBtn.innerHTML = '❤️ 보고싶다 취소';
+                showToast('목록에 담겼습니다!', 'success');
+            }
+        } catch (error) {
+            showToast('처리에 실패했습니다.', 'error');
         }
     });
 
-    // 6. 리뷰 작성 폼 제출 로직
+    // 리뷰 폼 제출 (진짜 API 연동)
     const reviewForm = document.getElementById('review-form');
-    reviewForm.addEventListener('submit', (e) => {
-        e.preventDefault(); // 페이지 새로고침 방지
+    reviewForm.addEventListener('submit', async (e) => {
+        e.preventDefault(); 
+        const reviewScore = document.getElementById('review-score').value;
+        const reviewContent = document.getElementById('review-content').value;
         
-        const score = document.getElementById('review-score').value;
-        const content = document.getElementById('review-content').value;
-        
-        // 새 리뷰 객체 생성 (프론트 단에서 바로 목록에 추가하기 위함)
-        const newReview = {
-            id: Date.now(),
-            author: "나(현재 유저)", 
-            score: parseInt(score),
-            content: content,
-            date: "방금 전"
-        };
-
-        // 배열 맨 앞에 새 리뷰 추가 후 다시 렌더링
-        mockReviews.unshift(newReview);
-        renderReviews(mockReviews);
-
-        // 통계 숫자 살짝 업데이트 (시각적 효과)
-        const totalElem = document.getElementById('stat-total-reviews');
-        totalElem.innerText = parseInt(totalElem.innerText) + 1;
-
-        // 폼 초기화 및 알림
-        reviewForm.reset();
-        alert("리뷰가 성공적으로 등록되었습니다! 🎉");
+        try {
+            await apiFetch(`/api/reviews`, 'POST', {
+                mal_id: malId,
+                score: parseInt(reviewScore),
+                content: reviewContent
+            });
+            showToast("리뷰가 성공적으로 등록되었습니다! 🎉", 'success');
+            reviewForm.reset();
+            loadDetail(); // 리뷰 등록 후 데이터 다시 불러오기
+        } catch (error) {
+            showToast("리뷰 등록에 실패했습니다.", "error");
+        }
     });
 });

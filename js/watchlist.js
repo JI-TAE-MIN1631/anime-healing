@@ -4,18 +4,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const grid = document.getElementById('watchlist-grid');
     const emptyState = document.getElementById('empty-state');
 
-    // 🚀 프론트엔드 확인용 더미 데이터 (내가 찜한 목록)
-    let mockWatchlist = [
-        { mal_id: 1, title: "스파이 패밀리", image_url: "https://picsum.photos/250/350?random=1", score: 8.5, genres: ["액션", "코미디"] },
-        { mal_id: 3, title: "장송의 프리렌", image_url: "https://picsum.photos/250/350?random=3", score: 9.1, genres: ["드라마", "판타지"] }
-    ];
+    function renderWatchlist(animeList) {
+        grid.innerHTML = ''; 
 
-    // 화면 렌더링 함수
-    function renderWatchlist() {
-        grid.innerHTML = ''; // 기존 카드 초기화
-
-        // 찜한 데이터가 0개면 빈 화면을 띄움
-        if (mockWatchlist.length === 0) {
+        if (!animeList || animeList.length === 0) {
             emptyState.classList.remove('hidden');
             grid.classList.add('hidden');
             return;
@@ -24,10 +16,9 @@ document.addEventListener('DOMContentLoaded', () => {
             grid.classList.remove('hidden');
         }
 
-        // 데이터가 있으면 카드 생성
-        mockWatchlist.forEach(anime => {
+        animeList.forEach(anime => {
             const card = document.createElement('div');
-            card.className = 'anime-card'; // index.css 디자인 재사용
+            card.className = 'anime-card'; 
             
             card.innerHTML = `
                 <div class="card-image-wrap">
@@ -38,12 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h4 class="card-title">${anime.title}</h4>
                     <div class="card-meta">
                         <span class="card-score">⭐ ${anime.score.toFixed(1)}</span>
-                        <span class="card-genres">${anime.genres.join(', ')}</span>
+                        <span class="card-genres">${(anime.genres || []).join(', ')}</span>
                     </div>
                 </div>
             `;
 
-            // 카드 클릭 시 상세 페이지 이동  (단, 삭제 버튼 누를 땐 제외)
             card.addEventListener('click', (e) => {
                 if (!e.target.closest('.delete-btn')) {
                     window.location.href = `detail.html?mal_id=${anime.mal_id}`;
@@ -53,20 +43,32 @@ document.addEventListener('DOMContentLoaded', () => {
             grid.appendChild(card);
         });
 
-        // 삭제 버튼(휴지통) 이벤트 연결
+        // 삭제 로직 (진짜 API 연동)
         document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const idToDelete = parseInt(btn.dataset.id);
-                
-                // 해당 ID를 배열에서 삭제
-                mockWatchlist = mockWatchlist.filter(item => item.mal_id !== idToDelete);
-                
-                // 화면 다시 그리기 (마지막 1개를 지우면 자동으로 빈 화면 뜸)
-                renderWatchlist();
+            btn.addEventListener('click', async (e) => {
+                const idToDelete = btn.dataset.id;
+                try {
+                    await apiFetch(`/api/watchlist/${idToDelete}`, 'DELETE');
+                    showToast('목록에서 삭제되었습니다.', 'info');
+                    loadWatchlist(); // 지운 후 목록 다시 불러오기
+                } catch (error) {
+                    showToast('삭제에 실패했습니다.', 'error');
+                }
             });
         });
     }
 
-    // 초기 화면 렌더링 실행
-    renderWatchlist();
+    // 🚀 [수정됨] 백엔드에서 찜 목록 가져오기
+    async function loadWatchlist() {
+        try {
+            const data = await apiFetch('/api/watchlist', 'GET');
+            renderWatchlist(data);
+        } catch (error) {
+            console.error(error);
+            showToast('목록을 불러오지 못했습니다.', 'error');
+            renderWatchlist([]); // 에러 시 빈 화면 띄우기
+        }
+    }
+
+    loadWatchlist();
 });
