@@ -10,7 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // 화면 요소들
     const poster = document.getElementById('detail-poster');
     const title = document.getElementById('detail-title');
     const score = document.getElementById('detail-score');
@@ -20,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const reviewList = document.getElementById('review-list');
     const watchlistBtn = document.getElementById('detail-watchlist-btn');
 
-    // 리뷰 렌더링 함수
+    // 🚀 [보안 핵심] 리뷰 렌더링 시 XSS(해킹) 방어 적용
     function renderReviews(reviews) {
         reviewList.innerHTML = ''; 
         if (!reviews || reviews.length === 0) {
@@ -30,19 +29,25 @@ document.addEventListener('DOMContentLoaded', () => {
         reviews.forEach(review => {
             const div = document.createElement('div');
             div.className = 'review-item';
+            
+            // 1. 뼈대만 innerHTML로 잡고 내용물은 비워둡니다.
             div.innerHTML = `
                 <div class="review-item-header">
-                    <span class="reviewer-name">👤 ${review.author}</span>
+                    <span class="reviewer-name">👤 <span class="safe-author"></span></span>
                     <span class="review-date">${review.date}</span>
                 </div>
                 <div class="review-item-score">⭐ ${review.score}점</div>
-                <div class="review-item-content">${review.content}</div>
+                <div class="review-item-content safe-content"></div>
             `;
+            
+            // 2. 사용자가 입력한 데이터는 반드시 textContent로 넣어서 문자로만 취급!
+            div.querySelector('.safe-author').textContent = review.author || '익명';
+            div.querySelector('.safe-content').textContent = review.content;
+
             reviewList.appendChild(div);
         });
     }
 
-    // 🚀 [수정됨] 백엔드에서 상세 정보 가져오기
     async function loadDetail() {
         try {
             const data = await apiFetch(`/api/anime/${malId}`, 'GET');
@@ -66,12 +71,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderReviews(data.reviews || []);
             
-            // 보고싶다 상태 체크
             if (data.is_watchlisted) {
                 watchlistBtn.classList.add('active');
                 watchlistBtn.innerHTML = '❤️ 보고싶다 취소';
             }
-
         } catch (error) {
             console.error(error);
             showToast('작품 정보를 불러오지 못했습니다.', 'error');
@@ -80,7 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadDetail();
 
-    // 보고싶다 버튼 토글 (진짜 API 연동)
     watchlistBtn.addEventListener('click', async () => {
         try {
             if (watchlistBtn.classList.contains('active')) {
@@ -99,12 +101,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 리뷰 폼 제출 (진짜 API 연동)
+    // 🚀 [추가됨] 리뷰 등록 시 유효성 검사 추가
     const reviewForm = document.getElementById('review-form');
     reviewForm.addEventListener('submit', async (e) => {
         e.preventDefault(); 
         const reviewScore = document.getElementById('review-score').value;
-        const reviewContent = document.getElementById('review-content').value;
+        const reviewContent = document.getElementById('review-content').value.trim();
+        
+        // 방어: 빈칸만 치고 등록 누르면 막기
+        if (!reviewContent) {
+            showToast("리뷰 내용을 한 글자 이상 입력해 주세요.", "error");
+            return;
+        }
         
         try {
             await apiFetch(`/api/reviews`, 'POST', {
@@ -114,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             showToast("리뷰가 성공적으로 등록되었습니다! 🎉", 'success');
             reviewForm.reset();
-            loadDetail(); // 리뷰 등록 후 데이터 다시 불러오기
+            loadDetail(); 
         } catch (error) {
             showToast("리뷰 등록에 실패했습니다.", "error");
         }
