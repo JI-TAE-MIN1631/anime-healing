@@ -258,3 +258,46 @@
 .review-date { font-size: 0.8rem; color: #777; }
 .review-item-score { font-weight: bold; color: #ff9f43; margin-bottom: 8px;}
 .review-item-content { font-size: 0.95rem; line-height: 1.5; color: #444; }
+
+/* --- 📱 모바일 반응형 (화면 폭 480px 이하) --- */
+@media (max-width: 480px) {
+    .info-section {
+        padding: 20px 15px;
+    }
+
+    .poster-wrap {
+        width: 100%; /* 포스터를 가로로 꽉 차게 */
+        max-width: 300px;
+        margin: 0 auto; /* 가운데 정렬 */
+    }
+
+    .title-row {
+        flex-direction: column; /* 제목과 하트 버튼 세로 배치 */
+        gap: 15px;
+        align-items: flex-start;
+    }
+
+    .title-row h2 {
+        font-size: 1.6rem;
+    }
+
+    .heart-btn-large {
+        width: 100%; /* 버튼을 가로로 꽉 차게 */
+        justify-content: center;
+    }
+
+    .meta-info {
+        flex-direction: column; /* 평점과 장르 태그 세로 배치 */
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .review-input-wrap {
+        flex-direction: column; /* 리뷰 입력창과 등록 버튼 세로 배치 */
+    }
+
+    .btn-primary-small {
+        padding: 12px;
+        width: 100%;
+    }
+}

@@ -263,3 +263,26 @@
 
 @keyframes spin { 100% { transform: rotate(360deg); } }
 .hidden { display: none; }
+
+/* --- 📱 모바일 반응형 (화면 폭 480px 이하) --- */
+@media (max-width: 480px) {
+    .header-container {
+        flex-direction: column; /* 헤더 메뉴를 세로로 배치 */
+        gap: 12px;
+    }
+
+    .nav-links {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap; /* 메뉴가 넘치면 줄바꿈 */
+    }
+
+    .card-grid {
+        /* 모바일에서는 무조건 1열로 카드 배치 */
+        grid-template-columns: 1fr; 
+    }
+    
+    .tags-container {
+        justify-content: center;
+    }
+}

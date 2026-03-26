@@ -179,3 +179,21 @@ button {
     box-shadow: 0 4px 10px rgba(106, 17, 203, 0.4);
     transform: scale(1.1); /* 현재 단계만 살짝 커지게 */
 }
+
+/* --- 📱 모바일 반응형 (화면 폭 480px 이하) --- */
+@media (max-width: 480px) {
+    .auth-container {
+        padding: 30px 20px; /* 좌우 여백 줄이기 */
+        border-radius: 15px;
+    }
+    
+    .auth-form h2 {
+        font-size: 1.4rem; /* 모바일에서는 제목 크기 살짝 축소 */
+    }
+    
+    .step {
+        width: 28px;
+        height: 28px;
+        font-size: 0.9rem;
+    }
+}

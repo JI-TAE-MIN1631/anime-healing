@@ -43,3 +43,92 @@ body {
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
 }
+
+/* 1. 토스트 컨테이너 (여러 토스트가 쌓이는 곳) */
+.toast-container {
+    position: fixed;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    z-index: 9999;
+}
+
+/* 위치 A: 우측 하단 (기존 위치) */
+.toast-container.bottom-right {
+    bottom: 30px;
+    right: 30px;
+}
+
+/* 위치 B: 중앙 상단 (새로 추가) */
+.toast-container.top-center {
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    align-items: center; /* 자식 요소인 토스트들도 중앙 정렬 */
+}
+
+/* 2. 토스트 개별 아이템 스타일 */
+.toast {
+    min-width: 280px;
+    max-width: 350px;
+    padding: 16px 24px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: #333; /* 글씨색은 공통 스타일 body에서 온 거라 유지 (필요시 스타일 추가) */
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    opacity: 0; /* 처음엔 숨김 */
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* 통통 튀며 등장 */
+}
+
+/* 3. 등장 애니메이션 (등장 클래스 추가 시) */
+
+/* 우측 하단에서 스르륵 */
+.bottom-right .toast {
+    transform: translateX(150%);
+}
+.bottom-right .toast.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* 중앙 상단에서 아래로 툭 */
+.top-center .toast {
+    transform: translateY(-150%);
+}
+.top-center .toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 4. 상태에 따른 포인트 컬러 */
+.toast.success { border-left: 5px solid #00b894; }
+.toast.error { border-left: 5px solid #ff4757; }
+.toast.info { border-left: 5px solid #0984e3; }
+
+/* 💎 5. 특별 토스트: 로그인 & 로그아웃 모두 화려하게 적용 */
+.toast.special-glow {
+    background: linear-gradient(135deg, rgba(37, 117, 252, 0.5) 0%, rgba(106, 17, 203, 0.5) 100%);
+    color: #fff;
+    font-size: 1rem;
+    padding: 18px 28px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 10px 40px rgba(37, 117, 252, 0.4);
+    backdrop-filter: blur(20px);
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-left: none; /* 기존 상태 컬러바 제거하여 깔끔하게 */
+}
+
+/* 특별 토스트의 아이콘 색상 고정 */
+.toast.special-glow span:first-child {
+    font-size: 1.3rem;
+    color: #ff9f43;
+}
