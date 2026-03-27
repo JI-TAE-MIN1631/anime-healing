@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AniHealing - 마이페이지</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/mypage.css">
+</head>
+<body>
+    <header class="glass-header">
+        <div class="header-container">
+            <h1 class="logo">AniHealing ✨</h1>
+            <nav class="nav-links">
+                <a href="index.html" class="nav-btn">🏠 홈으로</a>
+                <a href="preferences.html" class="nav-btn">🎨 취향 변경</a>
+                <a href="watchlist.html" class="nav-btn">❤️ 보고싶다</a>
+                <button id="logout-btn" class="nav-btn logout">로그아웃</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="mypage-container">
+
+        <section class="mypage-card glass-panel">
+            <h3>👤 내 프로필</h3>
+            <div class="info-row">
+                <span class="info-label">아이디</span>
+                <span id="display-username" class="info-value">불러오는 중...</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">현재 닉네임</span>
+                <span id="display-nickname" class="info-value">불러오는 중...</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">성별</span>
+                <span id="display-gender" class="info-value">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">연령대</span>
+                <span id="display-age" class="info-value">-</span>
+            </div>
+        </section>
+
+        <section class="mypage-card glass-panel">
+            <h3>✏️ 닉네임 변경</h3>
+            <form id="nickname-form" class="mypage-form">
+                <div class="form-group">
+                    <input type="text" id="new-nickname" placeholder="새 닉네임 (1~50자)" maxlength="50" required>
+                </div>
+                <button type="submit" class="btn-primary">변경하기</button>
+            </form>
+        </section>
+
+        <section class="mypage-card glass-panel">
+            <h3>🔒 비밀번호 변경</h3>
+            <form id="password-form" class="mypage-form">
+                <div class="form-group">
+                    <input type="password" id="current-pw" placeholder="현재 비밀번호" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="new-pw" placeholder="새 비밀번호 (10자 이상, 대/소문자, 숫자 포함)" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="new-pw-confirm" placeholder="새 비밀번호 확인" required>
+                </div>
+                <button type="submit" class="btn-primary">변경하기</button>
+            </form>
+        </section>
+
+    </main>
+
+    <script src="./js/app.js"></script>
+    <script src="./js/mypage.js"></script>
+</body>
+</html>

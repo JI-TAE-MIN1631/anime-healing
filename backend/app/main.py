@@ -7,7 +7,7 @@ from app.database import engine, Base
 from app.models.models import (
     User, UserPreference, AnimeCache, Review, Watchlist, AiSummary
 )
-from app.routers import auth, preferences, anime, reviews, watchlist
+from app.routers import auth, preferences, anime, reviews, watchlist, profile
 from app.core.exceptions import (
     http_exception_handler,
     validation_exception_handler,
@@ -52,6 +52,7 @@ app.include_router(preferences.router)
 app.include_router(anime.router)
 app.include_router(reviews.router)
 app.include_router(watchlist.router)
+app.include_router(profile.router)
 
 
 @app.get("/", tags=["서버 상태"])

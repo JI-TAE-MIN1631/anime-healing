@@ -29,6 +29,12 @@ class ReviewCreateResponse(BaseModel):
     data: dict
 
 
+class ReviewUpdateRequest(BaseModel):
+    """리뷰 수정 요청"""
+    score: float = Field(..., ge=1.0, le=10.0)
+    content: str = Field(..., min_length=5, max_length=1000)
+
+
 class ReviewSummaryResponse(BaseModel):
     """AI 리뷰 요약 응답"""
     success: bool = True

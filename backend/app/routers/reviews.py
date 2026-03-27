@@ -1,10 +1,11 @@
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func as sql_func
 from app.database import get_db
 from app.models.models import User, Review, AiSummary, AnimeCache
 from app.schemas.reviews import (
-    ReviewCreateRequest, ReviewCreateResponse,
+    ReviewCreateRequest, ReviewUpdateRequest, ReviewCreateResponse,
     ReviewListResponse, ReviewStatsResponse, ReviewSummaryResponse
 )
 from app.core.deps import get_current_user
@@ -62,6 +63,60 @@ def create_review(
             "score": new_review.score,
             "content": new_review.content,
         },
+    }
+
+
+@router.put("/anime/{mal_id}/reviews/{review_id}", response_model=ReviewCreateResponse)
+def update_review(
+    mal_id: int,
+    review_id: int,
+    req: ReviewUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    review = db.query(Review).filter(Review.id == review_id, Review.mal_id == mal_id).first()
+    if not review:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="리뷰를 찾을 수 없습니다.")
+    if review.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="본인의 리뷰만 수정할 수 있습니다.")
+
+    review.score = req.score
+    review.content = req.content
+    db.commit()
+    db.refresh(review)
+
+    # AI 요약 캐시 무효화
+    db.query(AiSummary).filter(AiSummary.mal_id == mal_id).delete()
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "리뷰가 수정되었습니다.",
+        "data": {"review_id": review.id, "mal_id": mal_id, "score": review.score, "content": review.content},
+    }
+
+
+@router.delete("/anime/{mal_id}/reviews/{review_id}", response_model=ReviewCreateResponse)
+def delete_review(
+    mal_id: int,
+    review_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    review = db.query(Review).filter(Review.id == review_id, Review.mal_id == mal_id).first()
+    if not review:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="리뷰를 찾을 수 없습니다.")
+    if review.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="본인의 리뷰만 삭제할 수 있습니다.")
+
+    db.delete(review)
+    db.query(AiSummary).filter(AiSummary.mal_id == mal_id).delete()
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "리뷰가 삭제되었습니다.",
+        "data": {"review_id": review_id, "mal_id": mal_id},
     }
 
 
@@ -146,7 +201,7 @@ def get_review_stats(
 
 
 @router.get("/anime/{mal_id}/summary", response_model=ReviewSummaryResponse)
-def get_review_summary(
+async def get_review_summary(
     mal_id: int,
     db: Session = Depends(get_db),
 ):
@@ -200,7 +255,7 @@ def get_review_summary(
     title = cached_anime.title if cached_anime else f"작품 #{mal_id}"
 
     # Gemini로 요약 생성
-    summary_text = generate_review_summary(title, review_data)
+    summary_text = await asyncio.to_thread(generate_review_summary, title, review_data)
 
     # 4) 캐시에 저장
     new_summary = AiSummary(

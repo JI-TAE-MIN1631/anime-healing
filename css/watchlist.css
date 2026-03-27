@@ -1,0 +1,67 @@
+/* css/watchlist.css */
+
+/* 페이지 타이틀 중앙 정렬 */
+.page-title {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.page-title h2 {
+    color: var(--primary-color);
+    margin-bottom: 10px;
+    font-size: 1.8rem;
+}
+
+/* --- 빈 상태(Empty State) 디자인 --- */
+.empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    margin-top: 20px;
+}
+
+.empty-icon {
+    font-size: 5rem;
+    margin-bottom: 20px;
+    opacity: 0.9;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.1));
+}
+
+.empty-state h3 {
+    font-size: 1.5rem;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+.empty-state p {
+    color: #555;
+    font-size: 1.05rem;
+    margin-bottom: 20px;
+}
+
+/* --- 삭제(휴지통) 버튼 덮어쓰기 --- */
+/* (기존 메인 화면의 하트 버튼 위치에 들어갑니다) */
+.delete-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: rgba(255, 107, 107, 0.9);
+    color: white;
+    border: none;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 10;
+}
+
+.delete-btn:hover {
+    transform: scale(1.15) rotate(15deg); /* 마우스 올리면 살짝 커지며 기우뚱거림 */
+    background: #ff4757;
+    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.6);
+}

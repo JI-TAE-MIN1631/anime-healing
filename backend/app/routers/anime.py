@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -13,13 +14,14 @@ from app.services.jikan import (
 from app.services.ai import (
     generate_comments_and_synopses_batch,
     translate_synopsis,
+    translate_title,
 )
 
 router = APIRouter(prefix="/anime", tags=["애니"])
 
 
 @router.get("/recommend", response_model=AnimeListResponse)
-def recommend_anime(
+async def recommend_anime(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -47,15 +49,35 @@ def recommend_anime(
         score_max=preference.score_max,
     )
 
+    # 캐시에서 ai_comment 재사용 / 없는 항목만 AI 호출
+    # title_kr은 AI 결과로 항상 덮어씀 (영어 fallback 방지)
+    need_ai_indices = []
+    for i, anime in enumerate(results):
+        cached = get_cached_anime(db, anime["mal_id"])
+        if cached and cached.get("ai_comment"):
+            anime["ai_comment"] = cached["ai_comment"]
+            # title_kr이 영어와 다를 때만(진짜 번역된 경우) 캐시 사용
+            cached_title_kr = cached.get("title_kr", "")
+            if cached_title_kr and cached_title_kr != cached.get("title", ""):
+                anime["title_kr"] = cached_title_kr
+            else:
+                need_ai_indices.append(i)
+        else:
+            need_ai_indices.append(i)
+
+    if need_ai_indices:
+        uncached = [results[i] for i in need_ai_indices]
+        comments, synopses_kr, titles_kr = await asyncio.to_thread(
+            generate_comments_and_synopses_batch, uncached
+        )
+        for j, i in enumerate(need_ai_indices):
+            results[i]["ai_comment"] = comments[j]
+            results[i]["synopsis_kr"] = synopses_kr[j]
+            results[i]["title_kr"] = titles_kr[j]  # AI 결과로 항상 덮어쓰기
+
+    # AI 처리 후 캐싱 (title_kr, image_url_large, ai_comment 포함)
     for anime in results:
         cache_anime(db, anime)
-
-    # AI 코멘트 + 시놉시스 번역을 1번의 API 호출로 동시 처리
-    if results:
-        comments, synopses_kr = generate_comments_and_synopses_batch(results)
-        for i, anime in enumerate(results):
-            anime["ai_comment"] = comments[i]
-            anime["synopsis_kr"] = synopses_kr[i]
 
     return {
         "success": True,
@@ -108,7 +130,7 @@ def search_anime(
 
 
 @router.get("/{mal_id}", response_model=AnimeDetailResponse)
-def get_anime_detail(
+async def get_anime_detail(
     mal_id: int,
     db: Session = Depends(get_db),
 ):
@@ -120,7 +142,7 @@ def get_anime_detail(
     cached = get_cached_anime(db, mal_id)
     if cached:
         if cached.get("synopsis"):
-            cached["synopsis_kr"] = translate_synopsis(cached["synopsis"])
+            cached["synopsis_kr"] = await asyncio.to_thread(translate_synopsis, cached["synopsis"])
         else:
             cached["synopsis_kr"] = "줄거리 정보가 없습니다."
 
@@ -137,12 +159,14 @@ def get_anime_detail(
             detail="작품을 찾을 수 없습니다.",
         )
 
-    cache_anime(db, detail)
-
+    # 제목 + 줄거리 번역
+    detail["title_kr"] = await asyncio.to_thread(translate_title, detail["title"])
     if detail.get("synopsis"):
-        detail["synopsis_kr"] = translate_synopsis(detail["synopsis"])
+        detail["synopsis_kr"] = await asyncio.to_thread(translate_synopsis, detail["synopsis"])
     else:
         detail["synopsis_kr"] = "줄거리 정보가 없습니다."
+
+    cache_anime(db, detail)
 
     return {
         "success": True,

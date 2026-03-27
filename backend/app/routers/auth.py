@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.models import User, UserPreference
@@ -8,6 +8,18 @@ from app.schemas.auth import (
 from app.core.security import hash_password, verify_password, create_access_token
 
 router = APIRouter(prefix="/auth", tags=["인증"])
+
+
+@router.get("/check-username")
+def check_username(username: str = Query(...), db: Session = Depends(get_db)):
+    existing = db.query(User).filter(User.username == username).first()
+    return {"success": True, "message": "아이디 중복 확인", "data": {"available": existing is None}}
+
+
+@router.get("/check-nickname")
+def check_nickname(nickname: str = Query(...), db: Session = Depends(get_db)):
+    existing = db.query(User).filter(User.nickname == nickname).first()
+    return {"success": True, "message": "닉네임 중복 확인", "data": {"available": existing is None}}
 
 
 @router.post("/signup", response_model=MessageResponse)
@@ -60,7 +72,7 @@ def signup(req: SignupRequest, db: Session = Depends(get_db)):
         preference = UserPreference(
             user_id=new_user.id,
             genres=req.genres,
-            score_min=1.0,
+            score_min=5.0,
             score_max=10.0,
         )
         db.add(preference)
