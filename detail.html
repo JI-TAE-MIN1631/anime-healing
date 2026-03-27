@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AniHealing - 작품 상세</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/index.css"> <link rel="stylesheet" href="./css/detail.css">
+</head>
+<body>
+    <header class="glass-header">
+        <div class="header-container">
+            <h1 class="logo">AniHealing ✨</h1>
+            <nav class="nav-links">
+                <a href="index.html" class="nav-btn">🏠 홈으로</a>
+                <a href="watchlist.html" class="nav-btn">❤️ 보고싶다</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="detail-container">
+        <section class="info-section glass-panel">
+            <div class="poster-wrap">
+                <img id="detail-poster" src="" alt="포스터 이미지" class="detail-poster">
+            </div>
+            <div class="info-content">
+                <div class="title-row">
+                    <h2 id="detail-title">작품 제목 불러오는 중...</h2>
+                    <button id="detail-watchlist-btn" class="heart-btn-large">🤍 보고싶다</button>
+                </div>
+                <div class="meta-info">
+                    <span id="detail-score" class="score-text">⭐ 0.0</span>
+                    <div id="detail-genres" class="genres-wrap">
+                        </div>
+                </div>
+                <div class="synopsis">
+                    <h3>📖 줄거리</h3>
+                    <p id="detail-synopsis">줄거리 정보를 불러오는 중입니다.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="ai-summary-section glass-panel glow-panel">
+            <h3>🤖 AI가 요약한 유저들의 평가</h3>
+            <p id="detail-ai-summary" class="ai-text">유저들의 리뷰를 분석하고 있습니다...</p>
+        </section>
+
+        <section class="review-section glass-panel">
+            <div class="review-header">
+                <h3>💬 유저 리뷰</h3>
+                <div class="review-stats">
+                    <span>평균 <strong id="stat-avg-score">0.0</strong>점</span> • 
+                    <span>총 <strong id="stat-total-reviews">0</strong>개의 리뷰</span>
+                </div>
+            </div>
+
+            <form id="review-form" class="review-form">
+                <div class="score-select-wrap">
+                    <label for="review-score">내 평점:</label>
+                    <select id="review-score" required>
+                        <option value="10">10점 (완벽해요!)</option>
+                        <option value="9">9점</option>
+                        <option value="8">8점</option>
+                        <option value="7">7점</option>
+                        <option value="6">6점</option>
+                        <option value="5">5점 (보통이에요)</option>
+                        <option value="4">4점</option>
+                        <option value="3">3점</option>
+                        <option value="2">2점</option>
+                        <option value="1">1점 (별로예요)</option>
+                    </select>
+                </div>
+                <div class="review-input-wrap">
+                    <textarea id="review-content" placeholder="이 작품에 대한 솔직한 감상평을 남겨주세요!" required></textarea>
+                    <button type="submit" class="btn-primary-small">리뷰 등록</button>
+                </div>
+            </form>
+
+            <div class="review-list-header">
+                <button class="sort-btn active">최신순</button>
+                <button class="sort-btn">평점순</button>
+            </div>
+            <div id="review-list" class="review-list">
+                </div>
+        </section>
+    </main>
+
+    <script src="./js/app.js"></script>
+    <script src="./js/detail.js"></script>
+</body>
+</html>

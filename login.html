@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AniHealing - 환영합니다</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/login.css">
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="auth-container">
+            <div class="auth-tabs">
+                <button class="tab-btn active" id="tab-login">로그인</button>
+                <button class="tab-btn" id="tab-signup">회원가입</button>
+            </div>
+
+            <form id="login-form" class="auth-form active-form">
+                <h2>어서오세요! ✨</h2>
+                <div class="input-group">
+                    <input type="text" id="login-id" placeholder="아이디를 입력하세요" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="login-pw" placeholder="비밀번호를 입력하세요" required>
+                </div>
+                <button type="submit" class="btn-primary">로그인 시작하기</button>
+            </form>
+
+            <form id="signup-form" class="auth-form hidden-form">
+                <h2>환영합니다! 🚀</h2>
+                
+                <div class="step-indicator">
+                    <span class="step active-step">1</span>
+                    <span class="step">2</span>
+                    <span class="step">3</span>
+                </div>
+
+                <div class="signup-step active-step" id="step-1">
+                    <h3>계정 정보 입력</h3>
+                    <div class="input-group">
+                        <input type="text" id="signup-id" placeholder="아이디" required>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="signup-nickname" placeholder="닉네임" required>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="signup-pw" placeholder="비밀번호" required>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="signup-pw-confirm" placeholder="비밀번호 확인" required>
+                    </div>
+                    <button type="button" class="btn-primary btn-next">다음 단계로</button>
+                </div>
+
+                <div class="signup-step hidden-step" id="step-2">
+                    <h3>조금 더 알아갈게요</h3>
+                    <div class="input-group">
+                        <label>성별</label>
+                        <select id="signup-gender" required>
+                            <option value="">선택해주세요</option>
+                            <option value="male">남성</option>
+                            <option value="female">여성</option>
+                            <option value="none">선택안함</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>연령대</label>
+                        <select id="signup-age" required>
+                            <option value="">선택해주세요</option>
+                            <option value="10">10대</option>
+                            <option value="20">20대</option>
+                            <option value="30">30대</option>
+                            <option value="40">40대</option>
+                            <option value="50+">50대 이상</option>
+                        </select>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn-secondary btn-prev">이전</button>
+                        <button type="button" class="btn-primary btn-next">다음 단계로</button>
+                    </div>
+                </div>
+
+                <div class="signup-step hidden-step" id="step-3">
+                    <h3>어떤 장르를 좋아하시나요?</h3>
+                    <div class="input-group" style="text-align: center; color: #555; font-size: 0.9rem;">
+                        <p>장르는 나중에도 변경할 수 있어요!</p>
+                        <br>
+                        <span class="placeholder-text">장르 목록 API 연결 대기중...</span>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn-secondary btn-prev">이전</button>
+                        <button type="submit" class="btn-primary">가입 완료하기</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="./js/app.js"></script>
+    <script src="./js/login.js"></script>
+</body>
+</html>
