@@ -12,14 +12,14 @@ router = APIRouter(prefix="/watchlist", tags=["보고싶다"])
 
 
 @router.post("", response_model=WatchlistToggleResponse)
-def toggle_watchlist(
+def add_to_watchlist(
     req: WatchlistToggleRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
-    보고싶다 토글 API (로그인 필수)
-    이미 있으면 삭제, 없으면 추가
+    보고싶다 추가 API (로그인 필수)
+    이미 있으면 중복 추가하지 않음
     """
 
     # 1) 이미 보고싶다에 있는지 확인
@@ -33,15 +33,13 @@ def toggle_watchlist(
     )
 
     if existing:
-        # 이미 있으면 삭제
-        db.delete(existing)
-        db.commit()
+        # 이미 있으면 그냥 성공으로 처리 (프론트엔드 상태와 동기화)
         return {
             "success": True,
-            "message": "보고싶다에서 제거되었습니다.",
+            "message": "이미 보고싶다에 추가된 작품입니다.",
             "data": {
                 "mal_id": req.mal_id,
-                "action": "removed",
+                "action": "already_exists",
             },
         }
     else:

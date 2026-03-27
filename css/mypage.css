@@ -3,6 +3,20 @@
    프로젝트의 밝은 그래디언트 테마에 맞춤
    ============================ */
 
+/* --- 메인 메뉴(네비게이션) 중앙 정렬 --- */
+.header-container {
+    justify-content: center !important;
+    /* 요소들을 가운데로 모음 */
+    gap: 40px;
+    /* 로고와 메뉴 버튼들 사이의 간격 */
+}
+
+.nav-links {
+    margin-right: 0;
+    display: flex;
+    gap: 15px;
+}
+
 .mypage-container {
     max-width: 620px;
     margin: 40px auto;
@@ -16,6 +30,12 @@
 .mypage-card {
     padding: 28px 32px;
     border-radius: 20px;
+    background: rgba(255, 255, 255, 0.65);
+    /* 반투명 배경 추가 */
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    /* 뚜렷한 흰색 테두리로 밋밋함 해소 */
+    box-shadow: 0 8px 32px rgba(106, 17, 203, 0.08);
+    /* 입체감 있는 은은한 보라빛 그림자 */
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 

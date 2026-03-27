@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.models import User, UserPreference
+from app.models.models import User, UserPreference, Watchlist
 from app.schemas.anime import AnimeListResponse, AnimeDetailResponse
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_optional_current_user
 from app.services.jikan import (
     search_anime_sync,
     get_anime_detail_sync,
@@ -111,11 +111,23 @@ def search_anime(
 def get_anime_detail(
     mal_id: int,
     db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_optional_current_user),
 ):
     """
     작품 상세 API (로그인 불필요)
     캐시 우선 조회 + 한국어 시놉시스 번역
+    로그인 시 '보고싶다' 여부 포함
     """
+
+    is_watchlisted = False
+    if current_user:
+        is_in_db = (
+            db.query(Watchlist)
+            .filter(Watchlist.user_id == current_user.id, Watchlist.mal_id == mal_id)
+            .first()
+        )
+        if is_in_db:
+            is_watchlisted = True
 
     cached = get_cached_anime(db, mal_id)
     if cached:
@@ -123,6 +135,8 @@ def get_anime_detail(
             cached["synopsis_kr"] = translate_synopsis(cached["synopsis"])
         else:
             cached["synopsis_kr"] = "줄거리 정보가 없습니다."
+
+        cached["is_watchlisted"] = is_watchlisted
 
         return {
             "success": True,
@@ -138,6 +152,8 @@ def get_anime_detail(
         )
 
     cache_anime(db, detail)
+
+    detail["is_watchlisted"] = is_watchlisted
 
     if detail.get("synopsis"):
         detail["synopsis_kr"] = translate_synopsis(detail["synopsis"])

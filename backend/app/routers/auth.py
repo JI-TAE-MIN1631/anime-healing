@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.database import get_db
 from app.models.models import User, UserPreference
 from app.schemas.auth import (
@@ -10,33 +11,59 @@ from app.core.security import hash_password, verify_password, create_access_toke
 router = APIRouter(prefix="/auth", tags=["인증"])
 
 
+@router.get("/check-username/{username}", response_model=MessageResponse)
+def check_username_availability(username: str, db: Session = Depends(get_db)):
+    """
+    아이디 사용 가능 여부 실시간 확인
+    """
+    if db.query(User).filter(func.lower(User.username) == func.lower(username)).first():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="이미 사용 중인 아이디입니다.",
+        )
+    return {"success": True, "message": "사용 가능한 아이디입니다."}
+
+
+@router.get("/check-nickname/{nickname}", response_model=MessageResponse)
+def check_nickname_availability(nickname: str, db: Session = Depends(get_db)):
+    """
+    닉네임 사용 가능 여부 실시간 확인
+    """
+    if db.query(User).filter(func.lower(User.nickname) == func.lower(nickname)).first():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="이미 사용 중인 닉네임입니다.",
+        )
+    return {"success": True, "message": "사용 가능한 닉네임입니다."}
+
+
 @router.post("/signup", response_model=MessageResponse)
 def signup(req: SignupRequest, db: Session = Depends(get_db)):
     """
     회원가입 API
-    - 아이디 중복 체크
-    - 이메일 중복 체크
-    - 닉네임 중복 체크
+    - 아이디 중복 체크 (대소문자 구분 X)
+    - 이메일 중복 체크 (대소문자 구분 X)
+    - 닉네임 중복 체크 (대소문자 구분 X)
     - 비밀번호 암호화 후 저장
     - 선호 장르가 있으면 취향 설정도 함께 저장
     """
 
-    # 1) 아이디 중복 체크
-    if db.query(User).filter(User.username == req.username).first():
+    # 1) 아이디 중복 체크 (대소문자 구분 없이)
+    if db.query(User).filter(func.lower(User.username) == func.lower(req.username)).first():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="이미 사용 중인 아이디입니다.",
         )
 
-    # 2) 이메일 중복 체크
-    if db.query(User).filter(User.email == req.email).first():
+    # 2) 이메일 중복 체크 (대소문자 구분 없이)
+    if db.query(User).filter(func.lower(User.email) == func.lower(req.email)).first():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="이미 사용 중인 이메일입니다.",
         )
 
-    # 3) 닉네임 중복 체크
-    if db.query(User).filter(User.nickname == req.nickname).first():
+    # 3) 닉네임 중복 체크 (대소문자 구분 없이)
+    if db.query(User).filter(func.lower(User.nickname) == func.lower(req.nickname)).first():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="이미 사용 중인 닉네임입니다.",

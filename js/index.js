@@ -4,15 +4,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const grid = document.getElementById('anime-grid');
     const spinner = document.getElementById('loading-spinner');
 
-    // 카드 렌더링 함수 (기존과 동일)
-    function renderCards(animeList) {
-        grid.innerHTML = ''; 
+    // 카드 렌더링 함수 (찜 목록 정보를 인자로 받도록 수정)
+    function renderCards(animeList, watchlistSet = new Set()) {
+        grid.innerHTML = '';
         if (!animeList || animeList.length === 0) {
             grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">추천할 작품이 없습니다.</p>';
             return;
         }
 
         animeList.forEach(anime => {
+            // 현재 렌더링하는 카드가 찜 목록에 있는지 확인
+            const isWatchlisted = watchlistSet.has(anime.mal_id);
+
             const card = document.createElement('div');
             card.className = 'anime-card';
             card.addEventListener('click', (e) => {
@@ -24,7 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
             card.innerHTML = `
                 <div class="card-image-wrap">
                     <img src="${anime.image_url}" alt="${anime.title}" class="card-image">
-                    <button class="heart-btn" data-id="${anime.mal_id}">🤍</button>
+                    <button class="heart-btn ${isWatchlisted ? 'active' : ''}" data-id="${anime.mal_id}">
+                        ${isWatchlisted ? '❤️' : '🤍'}
+                    </button>
                 </div>
                 <div class="card-content">
                     <h4 class="card-title">${anime.title}</h4>
@@ -41,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
             grid.appendChild(card);
         });
 
-        // 하트(보고싶다) 버튼 로직 -> 진짜 API(POST /api/watchlist) 호출로 변경
+        // 하트(보고싶다) 버튼 클릭 로직 (기존과 동일)
         document.querySelectorAll('.heart-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const animeId = btn.dataset.id;
@@ -100,20 +105,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 🚀 백엔드 통신 로직
-    async function loadAnimeList() {
-        spinner.classList.remove('hidden'); // 로딩 시작
+    // 🚀 [수정됨] 찜 목록과 추천 목록을 순서대로 불러오는 로직
+    async function loadData() {
+        spinner.classList.remove('hidden');
         try {
-            const result = await apiFetch('/api/anime/recommend', 'GET');
-            renderCards(result.data);
+            // 1. 찜 목록 먼저 가져오기
+            const watchlistResult = await apiFetch('/api/watchlist', 'GET');
+            const watchlistIds = new Set((watchlistResult.data || []).map(item => item.mal_id));
+
+            // 2. 추천 목록 가져오기
+            const recommendResult = await apiFetch('/api/anime/recommend', 'GET');
+
+            // 3. 찜 목록 정보와 함께 카드 렌더링
+            renderCards(recommendResult.data, watchlistIds);
+
         } catch (error) {
             console.error(error);
-            showToast('추천 목록을 불러오지 못했습니다. 백엔드 서버를 확인하세요.', 'error');
+            showToast('데이터를 불러오지 못했습니다. 서버를 확인하세요.', 'error');
+            grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">추천 목록을 불러올 수 없습니다.</p>';
         } finally {
-            spinner.classList.add('hidden'); // 로딩 끝
+            spinner.classList.add('hidden');
         }
     }
 
     loadFilterBadges();
-    loadAnimeList();
+    loadData(); // 기존 loadAnimeList() 대신 호출
 });

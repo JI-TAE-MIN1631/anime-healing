@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabSignup = document.getElementById('tab-signup');
     const formLogin = document.getElementById('login-form');
     const formSignup = document.getElementById('signup-form');
-    
+
     tabLogin.addEventListener('click', () => {
         tabLogin.classList.add('active');
         tabSignup.classList.remove('active');
@@ -41,20 +41,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 회원가입 다음 버튼 누를 때 유효성 검사
     nextBtns.forEach((btn, index) => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             if (index === 0) {
-                // STEP 1: 아이디/닉네임/비밀번호 검사
+                // STEP 1: 유효성 검사 (프론트 + 백엔드 중복 확인)
                 const suId = document.getElementById('signup-id').value.trim();
                 const suNickname = document.getElementById('signup-nickname').value.trim();
                 const suPw = document.getElementById('signup-pw').value.trim();
                 const suPwConfirm = document.getElementById('signup-pw-confirm').value.trim();
 
-                if (!suId || suId.length < 3) {
-                    showToast('아이디는 3자 이상 영문/숫자로 입력해 주세요.', 'error', 'top-center');
+                if (!suId || suId.length < 3 || suId.length > 50) {
+                    showToast('아이디는 3자 이상 50자 이하로 입력해 주세요.', 'error', 'top-center');
                     return;
                 }
-                if (!suNickname) {
-                    showToast('닉네임을 입력해 주세요.', 'error', 'top-center');
+                if (!/^[a-zA-Z0-9]+$/.test(suId)) {
+                    showToast('아이디는 영문자와 숫자만 사용할 수 있습니다.', 'error', 'top-center');
+                    return;
+                }
+                if (!suNickname || suNickname.length < 1 || suNickname.length > 50) {
+                    showToast('닉네임은 1자 이상 50자 이하로 입력해 주세요.', 'error', 'top-center');
                     return;
                 }
                 if (suPw.length < 10) {
@@ -64,6 +68,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (suPw !== suPwConfirm) {
                     showToast('비밀번호가 일치하지 않습니다.', 'error', 'top-center');
                     return;
+                }
+
+                // 백엔드에 아이디/닉네임 중복 확인 요청
+                try {
+                    // 두 요청을 동시에 보내서 시간 절약
+                    await Promise.all([
+                        apiFetch(`/api/auth/check-username/${suId}`, 'GET'),
+                        apiFetch(`/api/auth/check-nickname/${suNickname}`, 'GET')
+                    ]);
+                } catch (error) {
+                    showToast(error.message || '중복 확인에 실패했습니다.', 'error', 'top-center');
+                    return; // 중복이거나 에러 발생 시 중단
                 }
             } else if (index === 1) {
                 // STEP 2: 성별/연령대 검사

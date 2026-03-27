@@ -7,6 +7,7 @@ from app.models.models import User
 
 # Bearer 토큰 방식 인증
 security = HTTPBearer()
+optional_security = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
@@ -43,4 +44,28 @@ def get_current_user(
             detail="존재하지 않는 유저입니다.",
         )
 
+    return user
+
+
+def get_optional_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(optional_security),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """
+    현재 로그인한 유저 정보를 가져오거나, 로그인하지 않았으면 None을 반환
+    (로그인이 필수가 아닌 API용)
+    """
+    if credentials is None:
+        return None
+
+    token = credentials.credentials
+    payload = decode_access_token(token)
+    if payload is None:
+        return None
+
+    user_id = payload.get("user_id")
+    if user_id is None:
+        return None
+
+    user = db.query(User).filter(User.id == user_id).first()
     return user
