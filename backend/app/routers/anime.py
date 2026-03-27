@@ -10,7 +10,10 @@ from app.services.jikan import (
     cache_anime,
     get_cached_anime,
 )
-from app.services.ai import generate_ai_comments_batch
+from app.services.ai import (
+    generate_comments_and_synopses_batch,
+    translate_synopsis,
+)
 
 router = APIRouter(prefix="/anime", tags=["애니"])
 
@@ -22,10 +25,10 @@ def recommend_anime(
 ):
     """
     맞춤 추천 API (로그인 필수)
-    저장된 취향 설정으로 자동 검색 + Gemini AI 추천 코멘트 생성
+    저장된 취향 설정으로 자동 검색 + AI 코멘트 + 한국어 시놉시스
+    Gemini API 1회 호출로 코멘트와 번역을 동시 처리
     """
 
-    # 1) 유저 취향 설정 조회
     preference = (
         db.query(UserPreference)
         .filter(UserPreference.user_id == current_user.id)
@@ -38,22 +41,21 @@ def recommend_anime(
             detail="취향 설정을 먼저 해주세요. (장르, 평점 구간)",
         )
 
-    # 2) Jikan API로 검색
     results = search_anime_sync(
         genres=preference.genres,
         score_min=preference.score_min,
         score_max=preference.score_max,
     )
 
-    # 3) 캐싱
     for anime in results:
         cache_anime(db, anime)
 
-    # 4) Gemini AI 코멘트 한 번에 생성 (API 1회 호출)
+    # AI 코멘트 + 시놉시스 번역을 1번의 API 호출로 동시 처리
     if results:
-        comments = generate_ai_comments_batch(results)
+        comments, synopses_kr = generate_comments_and_synopses_batch(results)
         for i, anime in enumerate(results):
             anime["ai_comment"] = comments[i]
+            anime["synopsis_kr"] = synopses_kr[i]
 
     return {
         "success": True,
@@ -112,10 +114,16 @@ def get_anime_detail(
 ):
     """
     작품 상세 API (로그인 불필요)
+    캐시 우선 조회 + 한국어 시놉시스 번역
     """
 
     cached = get_cached_anime(db, mal_id)
     if cached:
+        if cached.get("synopsis"):
+            cached["synopsis_kr"] = translate_synopsis(cached["synopsis"])
+        else:
+            cached["synopsis_kr"] = "줄거리 정보가 없습니다."
+
         return {
             "success": True,
             "message": "작품 상세 정보 (캐시)",
@@ -130,6 +138,11 @@ def get_anime_detail(
         )
 
     cache_anime(db, detail)
+
+    if detail.get("synopsis"):
+        detail["synopsis_kr"] = translate_synopsis(detail["synopsis"])
+    else:
+        detail["synopsis_kr"] = "줄거리 정보가 없습니다."
 
     return {
         "success": True,
