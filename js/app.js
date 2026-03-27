@@ -2,24 +2,24 @@
 
 const BASE_URL = "http://localhost:8000";
 
-window.showToast = function(message, type = 'success', position = 'bottom-right') {
+window.showToast = function (message, type = 'success', position = 'bottom-right') {
     let containerClass = `.toast-container.${position.replace(' ', '.')}`;
     let container = document.querySelector(containerClass);
     if (!container) {
         container = document.createElement('div');
-        container.className = `toast-container ${position}`; 
+        container.className = `toast-container ${position}`;
         document.body.appendChild(container);
     }
 
     const toast = document.createElement('div');
-    
+
     // 🚀 수정됨: '환영합니다' 또는 '로그아웃' 단어가 포함되면 모두 화려한 스타일 적용
     let toastType = type;
     if (message.includes('환영합니다') || message.includes('로그아웃')) {
-        toastType += ' special-glow'; 
+        toastType += ' special-glow';
     }
     toast.className = `toast ${toastType}`;
-    
+
     let icon = '✨';
     if (type === 'error') icon = '🚨';
     if (type === 'info') icon = '💡';
@@ -31,14 +31,14 @@ window.showToast = function(message, type = 'success', position = 'bottom-right'
 
     setTimeout(() => {
         toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 400); 
+        setTimeout(() => toast.remove(), 400);
     }, 3000);
 };
 
 // --- 공통 API 호출 함수 ---
 async function apiFetch(endpoint, method = 'GET', body = null) {
     const url = `${BASE_URL}${endpoint}`;
-    
+
     const headers = { 'Content-Type': 'application/json' };
 
     const token = localStorage.getItem('access_token');
@@ -63,12 +63,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentPage = window.location.pathname;
     const token = localStorage.getItem('access_token');
 
-    if (!currentPage.includes('login.html') && !currentPage.includes('preferences.html') && !token) {
+    if (!currentPage.includes('login.html') && !token) {
         showToast('로그인이 필요한 서비스입니다.', 'error', 'top-center');
         setTimeout(() => { window.location.href = 'login.html'; }, 1000);
-        return; 
+        return;
     }
-    
+
     if (currentPage.includes('login.html') && token) {
         window.location.href = 'index.html';
         return;
@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logoutBtn.addEventListener('click', () => {
             localStorage.removeItem('access_token');
             localStorage.removeItem('username');
-            
+
             // 🚀 수정됨: 로그아웃 알림을 상단(top-center)으로 띄움
             showToast('안전하게 로그아웃 되었습니다. 👋', 'info', 'top-center');
             setTimeout(() => { window.location.href = 'login.html'; }, 1000);

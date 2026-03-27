@@ -65,6 +65,96 @@ def create_review(
     }
 
 
+@router.put("/anime/{mal_id}/reviews", response_model=ReviewCreateResponse)
+def update_review(
+    mal_id: int,
+    req: ReviewCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    리뷰 수정 API (로그인 필수)
+    자신이 작성한 리뷰만 수정 가능
+    """
+
+    # 1) 자신의 리뷰 조회
+    review = (
+        db.query(Review)
+        .filter(Review.user_id == current_user.id, Review.mal_id == mal_id)
+        .first()
+    )
+
+    if not review:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="수정할 리뷰가 없습니다.",
+        )
+
+    # 2) 리뷰 수정
+    review.score = req.score
+    review.content = req.content
+    db.commit()
+    db.refresh(review)
+
+    # 3) AI 요약 캐시 갱신 필요
+    db.query(AiSummary).filter(AiSummary.mal_id == mal_id).delete()
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "리뷰가 수정되었습니다.",
+        "data": {
+            "review_id": review.id,
+            "mal_id": mal_id,
+            "score": review.score,
+            "content": review.content,
+        },
+    }
+
+
+@router.delete("/anime/{mal_id}/reviews", response_model=ReviewCreateResponse)
+def delete_review(
+    mal_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    리뷰 삭제 API (로그인 필수)
+    자신이 작성한 리뷰만 삭제 가능
+    """
+
+    # 1) 자신의 리뷰 조회
+    review = (
+        db.query(Review)
+        .filter(Review.user_id == current_user.id, Review.mal_id == mal_id)
+        .first()
+    )
+
+    if not review:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="삭제할 리뷰가 없습니다.",
+        )
+
+    # 2) 리뷰 삭제
+    review_id = review.id
+    db.delete(review)
+    db.commit()
+
+    # 3) AI 요약 캐시 갱신 필요
+    db.query(AiSummary).filter(AiSummary.mal_id == mal_id).delete()
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "리뷰가 삭제되었습니다.",
+        "data": {
+            "review_id": review_id,
+            "mal_id": mal_id,
+        },
+    }
+
+
 @router.get("/anime/{mal_id}/reviews", response_model=ReviewListResponse)
 def get_reviews(
     mal_id: int,

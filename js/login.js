@@ -21,6 +21,10 @@ document.addEventListener('DOMContentLoaded', () => {
         formLogin.classList.add('hidden-form');
     });
 
+    // HTML select value → 백엔드 스키마 값 매핑
+    const GENDER_MAP = { 'male': '남성', 'female': '여성', 'none': '선택안함' };
+    const AGE_MAP = { '10': '10대', '20': '20대', '30': '30대', '40': '40대', '50+': '50대+' };
+
     // 회원가입 단계 전환 로직
     const steps = document.querySelectorAll('.signup-step');
     const stepIndicators = document.querySelectorAll('.step');
@@ -35,61 +39,136 @@ document.addEventListener('DOMContentLoaded', () => {
         stepIndicators[currentStep].classList.add('active-step');
     }
 
-    // 🚀 [추가됨] 회원가입 다음 버튼 누를 때 유효성 검사
+    // 회원가입 다음 버튼 누를 때 유효성 검사
     nextBtns.forEach((btn, index) => {
         btn.addEventListener('click', () => {
             if (index === 0) {
-                // STEP 1: 아이디/비밀번호 검사
+                // STEP 1: 아이디/닉네임/비밀번호 검사
                 const suId = document.getElementById('signup-id').value.trim();
+                const suNickname = document.getElementById('signup-nickname').value.trim();
                 const suPw = document.getElementById('signup-pw').value.trim();
-                if (!suId || suPw.length < 4) {
-                    showToast('아이디를 입력하고, 비밀번호는 4자 이상이어야 합니다.', 'error', 'top-center');
-                    return; // 통과 못하면 다음 단계로 안 넘어감!
+                const suPwConfirm = document.getElementById('signup-pw-confirm').value.trim();
+
+                if (!suId || suId.length < 3) {
+                    showToast('아이디는 3자 이상 영문/숫자로 입력해 주세요.', 'error', 'top-center');
+                    return;
+                }
+                if (!suNickname) {
+                    showToast('닉네임을 입력해 주세요.', 'error', 'top-center');
+                    return;
+                }
+                if (suPw.length < 10) {
+                    showToast('비밀번호는 10자 이상이어야 합니다. (대소문자+숫자 포함)', 'error', 'top-center');
+                    return;
+                }
+                if (suPw !== suPwConfirm) {
+                    showToast('비밀번호가 일치하지 않습니다.', 'error', 'top-center');
+                    return;
                 }
             } else if (index === 1) {
-                // STEP 2: 닉네임 검사
-                const nickname = document.getElementById('signup-nickname').value.trim();
-                if (!nickname) {
-                    showToast('사용하실 닉네임을 입력해 주세요.', 'error', 'top-center');
-                    return; 
+                // STEP 2: 성별/연령대 검사
+                const gender = document.getElementById('signup-gender').value;
+                const age = document.getElementById('signup-age').value;
+                if (!gender) {
+                    showToast('성별을 선택해 주세요.', 'error', 'top-center');
+                    return;
+                }
+                if (!age) {
+                    showToast('연령대를 선택해 주세요.', 'error', 'top-center');
+                    return;
                 }
             }
             if (currentStep < steps.length - 1) updateStep(currentStep + 1);
         });
     });
 
-    // 회원가입 완료(Submit) 로직
-    formSignup.addEventListener('submit', (e) => {
-        e.preventDefault(); 
-        const nickname = document.getElementById('signup-nickname').value.trim();
-        
-        localStorage.setItem('username', nickname);
-        localStorage.setItem('access_token', 'fake-jwt-token-12345'); 
-        
-        showToast(`회원가입이 완료되었습니다!\n${nickname}님, 환영합니다! 🚀`, 'success', 'top-center');
-        setTimeout(() => { window.location.href = 'index.html'; }, 1000);
+    // 회원가입 이전 버튼 클릭 시 이전 단계로
+    const prevBtns = document.querySelectorAll('.btn-prev');
+    prevBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (currentStep > 0) updateStep(currentStep - 1);
+        });
     });
 
-    // 🚀 [추가됨] 로그인 폼 제출 시 유효성 검사 추가
+    // 회원가입 완료(Submit) — 실제 백엔드 API 호출
+    formSignup.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const username = document.getElementById('signup-id').value.trim();
+        const nickname = document.getElementById('signup-nickname').value.trim();
+        const password = document.getElementById('signup-pw').value.trim();
+        const passwordConfirm = document.getElementById('signup-pw-confirm').value.trim();
+        const genderRaw = document.getElementById('signup-gender').value;
+        const ageRaw = document.getElementById('signup-age').value;
+
+        // HTML select value를 백엔드 스키마 값으로 변환
+        const gender = GENDER_MAP[genderRaw] || '선택안함';
+        const ageGroup = AGE_MAP[ageRaw] || '20대';
+
+        // 이메일 필드가 HTML에 없으므로 아이디 기반으로 자동 생성
+        const email = `${username}@anihealing.com`;
+
+        try {
+            await apiFetch('/api/auth/signup', 'POST', {
+                username: username,
+                email: email,
+                nickname: nickname,
+                password: password,
+                password_confirm: passwordConfirm,
+                gender: gender,
+                age_group: ageGroup,
+            });
+
+            showToast(`회원가입이 완료되었습니다!\n${nickname}님, 환영합니다! 🚀`, 'success', 'top-center');
+
+            // 가입 성공 후 자동으로 로그인 처리
+            const loginData = await apiFetch('/api/auth/login', 'POST', {
+                username: username,
+                password: password,
+            });
+
+            // 서버에서 받은 진짜 JWT 토큰과 유저 정보 저장
+            localStorage.setItem('access_token', loginData.data.access_token);
+            localStorage.setItem('username', loginData.data.nickname);
+            localStorage.setItem('user_id', loginData.data.user_id);
+
+            setTimeout(() => { window.location.href = 'index.html'; }, 1000);
+        } catch (error) {
+            showToast(error.message || '회원가입에 실패했습니다.', 'error', 'top-center');
+        }
+    });
+
+    // 로그인 폼 제출 — 실제 백엔드 API 호출
     const userIdInput = document.getElementById('login-id');
     const userPwInput = document.getElementById('login-pw');
 
-    formLogin.addEventListener('submit', (e) => {
-        e.preventDefault(); 
-        
-        const userId = userIdInput.value.trim(); // 양쪽 공백 제거
+    formLogin.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const userId = userIdInput.value.trim();
         const userPw = userPwInput.value.trim();
-        
-        // 빈칸이 하나라도 있으면 방어!
+
+        // 빈칸 방어
         if (!userId || !userPw) {
             showToast('아이디와 비밀번호를 모두 입력해 주세요.', 'error', 'top-center');
-            return; 
+            return;
         }
 
-        localStorage.setItem('username', userId);
-        localStorage.setItem('access_token', 'fake-jwt-token-12345'); 
-        
-        showToast(`${userId}님, 환영합니다! ✨`, 'success', 'top-center');
-        setTimeout(() => { window.location.href = 'index.html'; }, 1000);
+        try {
+            const data = await apiFetch('/api/auth/login', 'POST', {
+                username: userId,
+                password: userPw,
+            });
+
+            // 서버에서 받은 진짜 JWT 토큰과 유저 정보 저장
+            localStorage.setItem('access_token', data.data.access_token);
+            localStorage.setItem('username', data.data.nickname);
+            localStorage.setItem('user_id', data.data.user_id);
+
+            showToast(`${data.data.nickname}님, 환영합니다! ✨`, 'success', 'top-center');
+            setTimeout(() => { window.location.href = 'index.html'; }, 1000);
+        } catch (error) {
+            showToast(error.message || '로그인에 실패했습니다. 아이디와 비밀번호를 확인해 주세요.', 'error', 'top-center');
+        }
     });
 });

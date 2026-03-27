@@ -61,8 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 🚀 [수정됨] 백엔드에서 찜 목록 가져오기
     async function loadWatchlist() {
         try {
-            const data = await apiFetch('/api/watchlist', 'GET');
-            renderWatchlist(data);
+            const result = await apiFetch('/api/watchlist', 'GET');
+            renderWatchlist(result.data);
         } catch (error) {
             console.error(error);
             showToast('목록을 불러오지 못했습니다.', 'error');

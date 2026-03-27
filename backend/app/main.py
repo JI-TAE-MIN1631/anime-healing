@@ -7,7 +7,7 @@ from app.database import engine, Base
 from app.models.models import (
     User, UserPreference, AnimeCache, Review, Watchlist, AiSummary
 )
-from app.routers import auth, preferences, anime, reviews, watchlist
+from app.routers import auth, preferences, anime, reviews, watchlist, users
 from app.core.exceptions import (
     http_exception_handler,
     validation_exception_handler,
@@ -47,11 +47,13 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, general_exception_handler)
 
 # ===== 라우터 등록 =====
-app.include_router(auth.router)
-app.include_router(preferences.router)
-app.include_router(anime.router)
-app.include_router(reviews.router)
-app.include_router(watchlist.router)
+# 프론트엔드가 /api/* 경로로 호출하므로 공통 prefix 추가
+app.include_router(auth.router, prefix="/api")
+app.include_router(preferences.router, prefix="/api")
+app.include_router(anime.router, prefix="/api")
+app.include_router(reviews.router, prefix="/api")
+app.include_router(watchlist.router, prefix="/api")
+app.include_router(users.router, prefix="/api")
 
 
 @app.get("/", tags=["서버 상태"])

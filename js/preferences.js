@@ -13,7 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const summaryScore = document.getElementById('summary-score');
     const saveBtn = document.getElementById('save-pref-btn');
 
-    let selectedGenres = new Set(); // 중복 없는 장르 저장소
+    // 장르 ID(숫자)를 저장하는 Set (백엔드가 ID 배열을 기대하므로)
+    let selectedGenreIds = new Set();
 
     // --- 1. 평점 슬라이더 로직 ---
     function updateSliders() {
@@ -37,17 +38,17 @@ document.addEventListener('DOMContentLoaded', () => {
     scoreMin.addEventListener('input', updateSliders);
     scoreMax.addEventListener('input', updateSliders);
 
-    // --- 2. 장르 칩 선택 로직 ---
+    // --- 2. 장르 칩 선택 로직 (ID 기반) ---
     chipBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            const genreName = btn.innerText;
+            const genreId = parseInt(btn.dataset.id);
             
             // 토글 (선택/해제)
-            if (selectedGenres.has(genreName)) {
-                selectedGenres.delete(genreName);
+            if (selectedGenreIds.has(genreId)) {
+                selectedGenreIds.delete(genreId);
                 btn.classList.remove('selected');
             } else {
-                selectedGenres.add(genreName);
+                selectedGenreIds.add(genreId);
                 btn.classList.add('selected');
             }
             updateSummary();
@@ -56,16 +57,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 3. 하단 요약 바 업데이트 ---
     function updateSummary() {
-        // 장르 요약
-        if (selectedGenres.size === 0) {
+        // 장르 요약 (선택된 칩의 텍스트를 모아서 표시)
+        if (selectedGenreIds.size === 0) {
             summaryGenres.innerText = "선택된 장르 없음";
         } else {
-            const genreArr = Array.from(selectedGenres);
+            const selectedNames = [];
+            chipBtns.forEach(btn => {
+                if (selectedGenreIds.has(parseInt(btn.dataset.id))) {
+                    selectedNames.push(btn.innerText);
+                }
+            });
             // 2개까지만 보여주고 나머지는 '+ N' 으로 표시
-            if (genreArr.length > 2) {
-                summaryGenres.innerText = `${genreArr[0]}, ${genreArr[1]} 외 ${genreArr.length - 2}개`;
+            if (selectedNames.length > 2) {
+                summaryGenres.innerText = `${selectedNames[0]}, ${selectedNames[1]} 외 ${selectedNames.length - 2}개`;
             } else {
-                summaryGenres.innerText = genreArr.join(', ');
+                summaryGenres.innerText = selectedNames.join(', ');
             }
         }
 
@@ -79,17 +85,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const preset = btn.dataset.preset;
             
             // 초기화
-            selectedGenres.clear();
+            selectedGenreIds.clear();
             chipBtns.forEach(c => c.classList.remove('selected'));
 
             if (preset === 'healing') {
-                selectChip('일상');
+                selectChipById(36); // 일상
                 scoreMin.value = 5.0; scoreMax.value = 10.0;
             } else if (preset === 'action') {
-                selectChip('액션'); selectChip('판타지');
+                selectChipById(1);  // 액션
+                selectChipById(10); // 판타지
                 scoreMin.value = 6.0; scoreMax.value = 10.0;
             } else if (preset === 'romance') {
-                selectChip('로맨스'); selectChip('코미디');
+                selectChipById(22); // 로맨스
+                selectChipById(4);  // 코미디
                 scoreMin.value = 5.0; scoreMax.value = 10.0;
             } else if (preset === 'masterpiece') {
                 scoreMin.value = 8.5; scoreMax.value = 10.0;
@@ -99,22 +107,34 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    function selectChip(name) {
+    // 장르 ID로 칩을 선택하는 헬퍼 함수
+    function selectChipById(genreId) {
         chipBtns.forEach(btn => {
-            if (btn.innerText === name) {
-                selectedGenres.add(name);
+            if (parseInt(btn.dataset.id) === genreId) {
+                selectedGenreIds.add(genreId);
                 btn.classList.add('selected');
             }
         });
     }
 
-    // --- 5. 저장 버튼 클릭 시 다음 페이지로 이동 ---
-    saveBtn.addEventListener('click', () => {
-        if (selectedGenres.size === 0) {
-            alert("최소 1개 이상의 장르를 선택해주세요!");
+    // --- 5. 저장 버튼 클릭 시 백엔드 API 호출 ---
+    saveBtn.addEventListener('click', async () => {
+        if (selectedGenreIds.size === 0) {
+            showToast("최소 1개 이상의 장르를 선택해주세요!", 'error');
             return;
         }
-        // 원래는 여기서 API 통신을 해야 하지만, 프론트 먼저 하므로 바로 화면 이동
-        window.location.href = 'index.html'; 
+
+        try {
+            await apiFetch('/api/users/me/preferences', 'PUT', {
+                genres: Array.from(selectedGenreIds),
+                score_min: parseFloat(scoreMin.value),
+                score_max: parseFloat(scoreMax.value),
+            });
+
+            showToast('취향 설정이 저장되었습니다! 🎉', 'success');
+            setTimeout(() => { window.location.href = 'index.html'; }, 1000);
+        } catch (error) {
+            showToast(error.message || '취향 설정 저장에 실패했습니다.', 'error');
+        }
     });
 });

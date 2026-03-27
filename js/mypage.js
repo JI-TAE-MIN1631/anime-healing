@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ── 프로필 정보 로드 ──────────────────────────────────────
     try {
-        const res = await apiFetch('/users/me', 'GET');
+        const res = await apiFetch('/api/users/me', 'GET');
         const { username, nickname, gender, age_group } = res.data;
         document.getElementById('display-username').innerText = username;
         document.getElementById('display-nickname').innerText = nickname;
@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         try {
-            const res = await apiFetch('/users/me/nickname', 'PUT', { nickname });
+            const res = await apiFetch('/api/users/me/nickname', 'PUT', { nickname });
             // localStorage의 표시 이름도 갱신
             localStorage.setItem('username', res.data.nickname);
             document.getElementById('display-nickname').innerText = res.data.nickname;
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         try {
-            await apiFetch('/users/me/password', 'PUT', {
+            await apiFetch('/api/users/me/password', 'PUT', {
                 current_password: currentPw,
                 new_password: newPw,
                 new_password_confirm: newPwConfirm,
