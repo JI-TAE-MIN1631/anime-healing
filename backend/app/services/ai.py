@@ -10,10 +10,9 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 MODEL = "gemini-2.5-flash"
 
 
-def generate_ai_comments_batch(anime_list: list[dict]) -> list[str]:
+def generate_comments_and_synopses_batch(anime_list: list[dict]) -> tuple[list[str], list[str]]:
     """
-    여러 애니메이션의 AI 추천 코멘트를 한 번에 생성 (Gemini)
-    API 호출 1번으로 전부 처리
+    AI 추천 코멘트 + 시놉시스 한국어 번역을 한 번에 생성 (API 1회 호출)
     """
     try:
         anime_info = ""
@@ -22,15 +21,16 @@ def generate_ai_comments_batch(anime_list: list[dict]) -> list[str]:
 {i + 1}번. {anime['title']}
 - 장르: {', '.join(anime['genres'])}
 - 평점: {anime['score']}/10
-- 줄거리: {anime.get('synopsis', '정보 없음')[:100]}
+- 줄거리: {anime.get('synopsis', '정보 없음')[:200]}
 """
 
         prompt = f"""당신은 애니메이션 추천 전문가입니다.
-아래 애니메이션들에 대해 각각 한국어로 2~3문장의 짧은 추천 코멘트를 작성해주세요.
-따뜻하고 친근한 톤으로 작성해주세요.
+아래 애니메이션들에 대해 두 가지 작업을 해주세요:
+1. 각 작품마다 한국어로 2~3문장의 짧은 추천 코멘트 작성 (따뜻하고 친근한 톤)
+2. 각 작품의 영어 줄거리를 한국어로 3~4문장으로 간결하게 번역
 
 반드시 아래 JSON 형식으로만 응답하세요. 다른 설명은 하지 마세요.
-{{"comments": ["1번 코멘트", "2번 코멘트", ...]}}
+{{"comments": ["1번 코멘트", "2번 코멘트", ...], "synopses": ["1번 한국어 줄거리", "2번 한국어 줄거리", ...]}}
 
 애니메이션 목록:
 {anime_info}"""
@@ -41,35 +41,40 @@ def generate_ai_comments_batch(anime_list: list[dict]) -> list[str]:
         )
         response_text = response.text.strip()
 
-        # JSON 파싱 (마크다운 코드블록 제거)
         response_text = response_text.replace("```json", "").replace("```", "").strip()
         parsed = json.loads(response_text)
+
         comments = parsed.get("comments", [])
+        synopses = parsed.get("synopses", [])
 
         while len(comments) < len(anime_list):
             comments.append("이 작품을 한번 감상해보세요!")
+        while len(synopses) < len(anime_list):
+            idx = len(synopses)
+            synopses.append(anime_list[idx].get("synopsis", "줄거리 정보가 없습니다."))
 
-        return comments
+        return comments, synopses
 
     except Exception as e:
-        print(f"AI 코멘트 일괄 생성 실패: {e}")
-        return ["이 작품을 한번 감상해보세요!"] * len(anime_list)
+        print(f"AI 코멘트+시놉시스 일괄 생성 실패: {e}")
+        default_comments = ["이 작품을 한번 감상해보세요!"] * len(anime_list)
+        default_synopses = [a.get("synopsis", "줄거리 정보가 없습니다.") for a in anime_list]
+        return default_comments, default_synopses
 
 
-def generate_ai_comment(title: str, genres: list[str], score: float, synopsis: str) -> str:
+def translate_synopsis(synopsis: str) -> str:
     """
-    단일 애니메이션 AI 추천 코멘트 생성 (Gemini)
+    영어 시놉시스를 한국어로 번역 (단일 작품용)
     """
+    if not synopsis:
+        return "줄거리 정보가 없습니다."
+
     try:
-        prompt = f"""당신은 애니메이션 추천 전문가입니다.
-아래 애니메이션 정보를 보고, 이 작품을 왜 추천하는지 한국어로 2~3문장의 짧은 추천 코멘트를 작성해주세요.
-따뜻하고 친근한 톤으로 작성해주세요.
-추천 코멘트만 작성하고 다른 설명은 하지 마세요.
+        prompt = f"""아래 애니메이션 줄거리를 자연스러운 한국어로 3~4문장으로 간결하게 번역해주세요.
+번역만 작성하고 다른 설명은 하지 마세요.
 
-작품명: {title}
-장르: {', '.join(genres)}
-평점: {score}/10
-줄거리: {synopsis[:200] if synopsis else '정보 없음'}"""
+영어 줄거리:
+{synopsis[:500]}"""
 
         response = client.models.generate_content(
             model=MODEL,
@@ -78,8 +83,8 @@ def generate_ai_comment(title: str, genres: list[str], score: float, synopsis: s
         return response.text.strip()
 
     except Exception as e:
-        print(f"AI 코멘트 생성 실패: {e}")
-        return "이 작품을 한번 감상해보세요!"
+        print(f"시놉시스 번역 실패: {e}")
+        return synopsis
 
 
 def generate_review_summary(title: str, reviews: list[dict]) -> str:
@@ -108,5 +113,3 @@ def generate_review_summary(title: str, reviews: list[dict]) -> str:
     except Exception as e:
         print(f"AI 리뷰 요약 실패: {e}")
         return "리뷰 요약을 생성할 수 없습니다."
-
-
