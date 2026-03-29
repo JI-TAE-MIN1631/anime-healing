@@ -35,12 +35,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const suNickname = document.getElementById('signup-nickname').value.trim();
                 const suPw = document.getElementById('signup-pw').value.trim();
                 const suPwConfirm = document.getElementById('signup-pw-confirm').value.trim();
-                if (!suId || suId.length < 3) {
-                    showToast('아이디는 3자 이상 입력해주세요.', 'error', 'top-center');
+                if (!suId || suId.length < 3 || suId.length > 50) {
+                    showToast('아이디는 3자 이상 50자 이하로 입력해주세요.', 'error', 'top-center');
                     return;
                 }
-                if (!suNickname) {
-                    showToast('닉네임을 입력해주세요.', 'error', 'top-center');
+                if (!/^[a-zA-Z0-9]+$/.test(suId)) {
+                    showToast('아이디는 영문자와 숫자만 사용할 수 있습니다.', 'error', 'top-center');
+                    return;
+                }
+                if (!suNickname || suNickname.length < 1 || suNickname.length > 50) {
+                    showToast('닉네임은 1자 이상 50자 이하로 입력해주세요.', 'error', 'top-center');
                     return;
                 }
                 if (suPw.length < 10 || !/[A-Z]/.test(suPw) || !/[a-z]/.test(suPw) || !/[0-9]/.test(suPw)) {
@@ -51,26 +55,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     showToast('비밀번호가 일치하지 않습니다.', 'error', 'top-center');
                     return;
                 }
-                // 아이디 중복 체크
+                // 아이디/닉네임 중복 체크 (동시 요청)
                 try {
-                    const idCheckRes = await apiFetch(`/auth/check-username?username=${encodeURIComponent(suId)}`, 'GET');
-                    if (!idCheckRes.data.available) {
+                    const [idRes, nickRes] = await Promise.all([
+                        apiFetch(`/api/auth/check-username?username=${encodeURIComponent(suId)}`, 'GET'),
+                        apiFetch(`/api/auth/check-nickname?nickname=${encodeURIComponent(suNickname)}`, 'GET')
+                    ]);
+                    if (!idRes.data.available) {
                         showToast('이미 사용 중인 아이디입니다.', 'error', 'top-center');
                         return;
                     }
-                } catch (e) {
-                    showToast('아이디 확인 중 오류가 발생했습니다.', 'error', 'top-center');
-                    return;
-                }
-                // 닉네임 중복 체크
-                try {
-                    const checkRes = await apiFetch(`/auth/check-nickname?nickname=${encodeURIComponent(suNickname)}`, 'GET');
-                    if (!checkRes.data.available) {
+                    if (!nickRes.data.available) {
                         showToast('이미 사용 중인 닉네임입니다.', 'error', 'top-center');
                         return;
                     }
-                } catch (e) {
-                    showToast('닉네임 확인 중 오류가 발생했습니다.', 'error', 'top-center');
+                } catch (error) {
+                    showToast(error.message || '중복 확인에 실패했습니다.', 'error', 'top-center');
                     return;
                 }
             } else if (index === 1) {
@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     .map(btn => parseInt(btn.dataset.id));
 
         try {
-            await apiFetch('/auth/signup', 'POST', {
+            await apiFetch('/api/auth/signup', 'POST', {
                 username: suId,
                 password: suPw,
                 password_confirm: suPw,
@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 genres: selectedGenres
             });
             showToast('회원가입 완료! 로그인해주세요.🚀', 'success', 'top-center');
-            tabLogin.click(); 
+            tabLogin.click();
         } catch (error) {
             showToast(error.message || '회원가입 실패', 'error', 'top-center');
         }
@@ -154,19 +154,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const userPw = document.getElementById('login-pw').value.trim();
 
         try {
-            const response = await apiFetch('/auth/login', 'POST', { username: userId, password: userPw });
+            const response = await apiFetch('/api/auth/login', 'POST', { username: userId, password: userPw });
             localStorage.setItem('access_token', response.data.access_token);
             localStorage.setItem('username', response.data.nickname);
+            localStorage.setItem('user_id', response.data.user_id);
             showToast(`${response.data.nickname}님 환영합니다! ✨`, 'success', 'top-center');
-
-            // 취향 설정 여부 확인 후 분기
-            try {
-                const prefRes = await apiFetch('/users/me/preferences', 'GET');
-                const hasPrefs = prefRes.data && prefRes.data.genres && prefRes.data.genres.length > 0;
-                setTimeout(() => { window.location.href = hasPrefs ? 'index.html' : 'preferences.html'; }, 1000);
-            } catch (e) {
-                setTimeout(() => { window.location.href = 'preferences.html'; }, 1000);
-            }
+            setTimeout(() => { window.location.href = 'index.html'; }, 1000);
         } catch (error) {
             showToast(error.message || '로그인 실패', 'error', 'top-center');
         }
