@@ -3,19 +3,30 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!malId) { showToast("잘못된 접근입니다.", "error"); setTimeout(() => window.location.href = 'index.html', 1000); return; }
 
     // localStorage에서 직접 가져오기
+    let currentUserId = null;
+    try {
+        const storedId = localStorage.getItem('user_id');
+        if (storedId) {
+            currentUserId = parseInt(storedId);
+        }
+    } catch (e) { }
 
     let currentSort = 'latest';
+    const watchlistBtn = document.getElementById('detail-watchlist-btn');
 
     // 🚀 여러 백엔드 API 데이터를 모아서 화면을 그림
     async function loadDetail() {
         try {
-            const [detailRes, statsRes] = await Promise.all([
+            const [detailRes, statsRes, watchlistRes] = await Promise.all([
                 apiFetch(`/api/anime/${malId}`, 'GET'),
                 apiFetch(`/api/anime/${malId}/reviews/stats`, 'GET'),
+                apiFetch(`/api/watchlist`, 'GET').catch(() => ({ data: [] }))
             ]);
 
             const anime = detailRes.data;
             const stats = statsRes.data;
+            const watchlist = watchlistRes.data || [];
+            const isWatchlisted = watchlist.some(item => item.mal_id === parseInt(malId));
 
             // 데이터 렌더링
             const posterEl = document.getElementById('detail-poster');
@@ -36,9 +47,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 genresWrap.appendChild(span);
             });
 
-            if (data.is_watchlisted) {
+            if (isWatchlisted) {
                 watchlistBtn.classList.add('active');
                 watchlistBtn.innerHTML = '❤️ 보고싶다 취소';
+            } else {
+                watchlistBtn.classList.remove('active');
+                watchlistBtn.innerHTML = '🤍 보고싶다';
             }
         } catch (error) { showToast('작품 정보를 불러오지 못했습니다.', 'error'); return; }
 
@@ -155,6 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 저장 버튼
         reviewList.querySelectorAll('.confirm-edit-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
+                const reviewId = btn.dataset.id;
                 const item = btn.closest('.review-item');
                 const score = parseInt(item.querySelector('.edit-score-select').value);
                 const content = item.querySelector('.edit-content-input').value.trim();
@@ -163,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 try {
-                    await apiFetch(`/api/anime/${malId}/reviews`, 'PUT', { score, content });
+                    await apiFetch(`/api/anime/${malId}/reviews/${reviewId}`, 'PUT', { score, content });
                     showToast('리뷰가 수정되었습니다! ✏️', 'success');
                     loadReviews();
                     loadReviewStats();
@@ -174,9 +189,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // 삭제 버튼
         reviewList.querySelectorAll('.delete-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
+                const reviewId = btn.dataset.id;
                 if (!confirm('리뷰를 삭제하시겠습니까?')) return;
                 try {
-                    await apiFetch(`/api/anime/${malId}/reviews`, 'DELETE');
+                    await apiFetch(`/api/anime/${malId}/reviews/${reviewId}`, 'DELETE');
                     showToast('리뷰가 삭제되었습니다.', 'info');
                     loadReviews();
                     loadReviewStats();
@@ -208,7 +224,6 @@ document.addEventListener('DOMContentLoaded', () => {
     loadReviews();
 
     // 🚀 보고싶다 토글
-    const watchlistBtn = document.getElementById('detail-watchlist-btn');
     watchlistBtn.addEventListener('click', async () => {
         try {
             if (watchlistBtn.classList.contains('active')) {
