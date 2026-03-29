@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── 장르 목록 API 로드 ────────────────────────────────────
     async function loadGenres() {
         try {
-            const res = await apiFetch('/genres', 'GET');
+            const res = await apiFetch('/api/genres', 'GET');
             genreContainer.innerHTML = '';
             res.data.forEach(genre => {
                 const btn = document.createElement('button');
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── 현재 취향 설정 불러와서 UI에 반영 ────────────────────
     async function loadCurrentPreferences() {
         try {
-            const res = await apiFetch('/users/me/preferences', 'GET');
+            const res = await apiFetch('/api/users/me/preferences', 'GET');
             if (!res.data) return;
             const { genres, score_min, score_max } = res.data;
 
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         try {
-            await apiFetch('/users/me/preferences', 'PUT', {
+            await apiFetch('/api/users/me/preferences', 'PUT', {
                 genres: Array.from(selectedGenres),
                 score_min: min,
                 score_max: max,

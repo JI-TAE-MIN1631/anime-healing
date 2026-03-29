@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.addEventListener('click', async () => {
                 const animeId = parseInt(btn.dataset.id);
                 try {
-                    const response = await apiFetch('/watchlist', 'POST', { mal_id: animeId });
+                    const response = await apiFetch('/api/watchlist', 'POST', { mal_id: animeId });
                     if (response.data.action === "added") {
                         btn.classList.add('active'); btn.innerText = '❤️';
                         showToast('목록에 추가되었습니다!', 'success', 'top-center');
@@ -62,8 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadFilterSummary() {
         try {
             const [prefRes, genreRes] = await Promise.all([
-                apiFetch('/users/me/preferences', 'GET'),
-                apiFetch('/genres', 'GET'),
+                apiFetch('/api/users/me/preferences', 'GET'),
+                apiFetch('/api/genres', 'GET'),
             ]);
             const prefs = prefRes.data;
             const allGenres = genreRes.data;
@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadAnimeList() {
         spinner.classList.remove('hidden'); 
         try {
-            const response = await apiFetch('/anime/recommend', 'GET');
+            const response = await apiFetch('/api/anime/recommend', 'GET');
             renderCards(response.data); 
         } catch (error) {
             if (error.message && error.message.includes('취향 설정')) {

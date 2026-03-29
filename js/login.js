@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadGenres() {
         if (!genreContainer) return;
         try {
-            const response = await apiFetch('/genres', 'GET');
+            const response = await apiFetch('/api/genres', 'GET');
             genreContainer.innerHTML = ''; 
             response.data.forEach(genre => {
                 const btn = document.createElement('button');
