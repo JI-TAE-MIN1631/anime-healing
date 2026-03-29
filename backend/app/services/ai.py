@@ -10,7 +10,7 @@ load_dotenv()
 _api_key = os.getenv("GEMINI_API_KEY")
 print(f"[AI] GEMINI_API_KEY 로드됨: {'있음' if _api_key else '없음(확인필요)'}")
 client = genai.Client(api_key=_api_key)
-MODEL = "gemini-2.0-flash"
+MODEL = "gemini-2.5-flash"
 
 
 def generate_comments_and_synopses_batch(anime_list: list[dict]) -> tuple[list[str], list[str], list[str]]:
