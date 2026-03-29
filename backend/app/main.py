@@ -35,6 +35,8 @@ app.add_middleware(
         "http://localhost:5500",
         "http://127.0.0.1:5501",
         "http://localhost:5501",
+        "https://animehealing.com",
+        "https://www.animehealing.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],

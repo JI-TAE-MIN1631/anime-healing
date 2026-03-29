@@ -1,6 +1,6 @@
 // js/app.js
 
-const BASE_URL = "http://localhost:8000";
+const BASE_URL = "https://api.animehealing.com";
 
 // 이미지 로드 실패 시 빈 투명 이미지로 대체 (broken icon 방지)
 window.onImgError = function(img) {
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentPage = window.location.pathname;
     const token = localStorage.getItem('access_token');
 
-    if (!currentPage.includes('login.html') && !currentPage.includes('preferences.html') && !token) {
+    if (!currentPage.includes('login.html') && !token) {
         showToast('로그인이 필요한 서비스입니다.', 'error', 'top-center');
         setTimeout(() => { window.location.href = 'login.html'; }, 1000);
         return; 
