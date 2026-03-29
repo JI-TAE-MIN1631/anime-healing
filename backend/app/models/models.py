@@ -42,10 +42,13 @@ class AnimeCache(Base):
 
     mal_id = Column(Integer, primary_key=True)
     title = Column(String(255))
+    title_kr = Column(String(255), nullable=True)
     genres = Column(JSON)
     score = Column(Float)
     synopsis = Column(Text)
     image_url = Column(String(500))
+    image_url_large = Column(String(500), nullable=True)
+    ai_comment = Column(Text, nullable=True)
     cached_at = Column(DateTime, server_default=func.now())
 
 

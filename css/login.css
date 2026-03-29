@@ -180,6 +180,31 @@ button {
     transform: scale(1.1); /* 현재 단계만 살짝 커지게 */
 }
 
+/* 장르 선택 칩 버튼 */
+.chip-btn {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.6);
+    color: var(--text-main);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: var(--transition-speed);
+    width: auto;
+}
+
+.chip-btn:hover {
+    background: rgba(255, 255, 255, 0.85);
+    transform: translateY(-1px);
+}
+
+.chip-btn.selected {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 10px rgba(106, 17, 203, 0.3);
+}
+
 /* --- 📱 모바일 반응형 (화면 폭 480px 이하) --- */
 @media (max-width: 480px) {
     .auth-container {

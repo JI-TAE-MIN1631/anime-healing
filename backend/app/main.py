@@ -7,7 +7,7 @@ from app.database import engine, Base
 from app.models.models import (
     User, UserPreference, AnimeCache, Review, Watchlist, AiSummary
 )
-from app.routers import auth, preferences, anime, reviews, watchlist, users
+from app.routers import auth, preferences, anime, reviews, watchlist, profile
 from app.core.exceptions import (
     http_exception_handler,
     validation_exception_handler,
@@ -35,6 +35,8 @@ app.add_middleware(
         "http://localhost:5500",
         "http://127.0.0.1:5501",
         "http://localhost:5501",
+        "https://animehealing.com",
+        "https://www.animehealing.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -47,13 +49,12 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, general_exception_handler)
 
 # ===== 라우터 등록 =====
-# 프론트엔드가 /api/* 경로로 호출하므로 공통 prefix 추가
 app.include_router(auth.router, prefix="/api")
 app.include_router(preferences.router, prefix="/api")
 app.include_router(anime.router, prefix="/api")
 app.include_router(reviews.router, prefix="/api")
 app.include_router(watchlist.router, prefix="/api")
-app.include_router(users.router, prefix="/api")
+app.include_router(profile.router, prefix="/api")
 
 
 @app.get("/", tags=["서버 상태"])

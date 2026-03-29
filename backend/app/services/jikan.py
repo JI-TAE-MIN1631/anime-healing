@@ -2,6 +2,7 @@ import httpx
 import asyncio
 from sqlalchemy.orm import Session
 from app.models.models import AnimeCache
+from app.core.genres import GENRE_ID_TO_KR, GENRE_EN_TO_KR
 from datetime import datetime
 
 # Jikan API 기본 URL
@@ -85,20 +86,31 @@ def get_anime_detail_sync(mal_id: int) -> dict | None:
 def cache_anime(db: Session, anime_data: dict):
     """
     애니메이션 데이터를 DB에 캐싱
-    이미 캐시에 있으면 건너뜀
+    이미 캐시에 있으면 title_kr, image_url_large만 보완
     """
     existing = db.query(AnimeCache).filter(AnimeCache.mal_id == anime_data["mal_id"]).first()
     if not existing:
         cache = AnimeCache(
             mal_id=anime_data["mal_id"],
             title=anime_data["title"],
+            title_kr=anime_data.get("title_kr"),
             genres=anime_data["genres"],
             score=anime_data["score"],
             synopsis=anime_data.get("synopsis", ""),
             image_url=anime_data.get("image_url", ""),
+            image_url_large=anime_data.get("image_url_large"),
+            ai_comment=anime_data.get("ai_comment"),
         )
         db.add(cache)
-        db.commit()
+    else:
+        # 기존 캐시에 없는 필드만 보완
+        if anime_data.get("title_kr") and not existing.title_kr:
+            existing.title_kr = anime_data["title_kr"]
+        if anime_data.get("image_url_large") and not existing.image_url_large:
+            existing.image_url_large = anime_data["image_url_large"]
+        if anime_data.get("ai_comment") and not existing.ai_comment:
+            existing.ai_comment = anime_data["ai_comment"]
+    db.commit()
 
 
 def get_cached_anime(db: Session, mal_id: int) -> dict | None:
@@ -111,12 +123,33 @@ def get_cached_anime(db: Session, mal_id: int) -> dict | None:
         return {
             "mal_id": cached.mal_id,
             "title": cached.title,
+            "title_kr": cached.title_kr,
             "genres": cached.genres,
             "score": cached.score,
             "synopsis": cached.synopsis,
             "image_url": cached.image_url,
+            "image_url_large": cached.image_url_large,
+            "ai_comment": cached.ai_comment,
         }
     return None
+
+
+def _translate_genres(raw_genres: list) -> list[str]:
+    """Jikan 장르 목록을 한국어 이름으로 변환"""
+    result = []
+    for g in raw_genres:
+        gid = g.get("mal_id")
+        gname = g.get("name", "")
+        kr = GENRE_ID_TO_KR.get(gid) or GENRE_EN_TO_KR.get(gname) or gname
+        result.append(kr)
+    return result
+
+
+def _force_https(url: str) -> str:
+    """HTTP URL을 HTTPS로 변환 (Mixed Content 방지)"""
+    if url and url.startswith("http://"):
+        return url.replace("http://", "https://", 1)
+    return url
 
 
 def _parse_anime_list(anime_list: list) -> list[dict]:
@@ -125,14 +158,16 @@ def _parse_anime_list(anime_list: list) -> list[dict]:
     """
     results = []
     for anime in anime_list:
+        raw_genres = anime.get("genres", [])
         results.append({
             "mal_id": anime.get("mal_id"),
             "title": anime.get("title", ""),
-            "genres": [g["name"] for g in anime.get("genres", [])],
-            "genre_ids": [g["mal_id"] for g in anime.get("genres", [])],
+            "genres": _translate_genres(raw_genres),
+            "genre_ids": [g["mal_id"] for g in raw_genres],
             "score": anime.get("score", 0),
             "synopsis": anime.get("synopsis", ""),
-            "image_url": anime.get("images", {}).get("jpg", {}).get("image_url", ""),
+            "image_url": _force_https(anime.get("images", {}).get("jpg", {}).get("image_url", "")),
+            "image_url_large": _force_https(anime.get("images", {}).get("jpg", {}).get("large_image_url", "")),
             "episodes": anime.get("episodes"),
             "status": anime.get("status", ""),
             "year": anime.get("year"),
@@ -144,18 +179,19 @@ def _parse_anime_detail(anime: dict) -> dict:
     """
     Jikan API 응답에서 필요한 필드만 추출 (상세용)
     """
+    raw_genres = anime.get("genres", [])
     return {
         "mal_id": anime.get("mal_id"),
         "title": anime.get("title", ""),
         "title_japanese": anime.get("title_japanese", ""),
-        "genres": [g["name"] for g in anime.get("genres", [])],
-        "genre_ids": [g["mal_id"] for g in anime.get("genres", [])],
+        "genres": _translate_genres(raw_genres),
+        "genre_ids": [g["mal_id"] for g in raw_genres],
         "score": anime.get("score", 0),
         "scored_by": anime.get("scored_by", 0),
         "rank": anime.get("rank"),
         "popularity": anime.get("popularity"),
         "synopsis": anime.get("synopsis", ""),
-        "image_url": anime.get("images", {}).get("jpg", {}).get("large_image_url", ""),
+        "image_url": _force_https(anime.get("images", {}).get("jpg", {}).get("large_image_url", "")),
         "episodes": anime.get("episodes"),
         "status": anime.get("status", ""),
         "aired": anime.get("aired", {}).get("string", ""),

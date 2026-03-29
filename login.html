@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/login.css">
 </head>
+
 <body>
     <div class="auth-wrapper">
         <div class="auth-container">
@@ -28,7 +30,7 @@
 
             <form id="signup-form" class="auth-form hidden-form">
                 <h2>환영합니다! 🚀</h2>
-                
+
                 <div class="step-indicator">
                     <span class="step active-step">1</span>
                     <span class="step">2</span>
@@ -58,20 +60,20 @@
                         <label>성별</label>
                         <select id="signup-gender" required>
                             <option value="">선택해주세요</option>
-                            <option value="male">남성</option>
-                            <option value="female">여성</option>
-                            <option value="none">선택안함</option>
+                            <option value="남성">남성</option>
+                            <option value="여성">여성</option>
+                            <option value="선택안함">선택안함</option>
                         </select>
                     </div>
                     <div class="input-group">
                         <label>연령대</label>
                         <select id="signup-age" required>
                             <option value="">선택해주세요</option>
-                            <option value="10">10대</option>
-                            <option value="20">20대</option>
-                            <option value="30">30대</option>
-                            <option value="40">40대</option>
-                            <option value="50+">50대 이상</option>
+                            <option value="10대">10대</option>
+                            <option value="20대">20대</option>
+                            <option value="30대">30대</option>
+                            <option value="40대">40대</option>
+                            <option value="50대+">50대 이상</option>
                         </select>
                     </div>
                     <div class="btn-group">
@@ -83,10 +85,10 @@
                 <div class="signup-step hidden-step" id="step-3">
                     <h3>어떤 장르를 좋아하시나요?</h3>
                     <div class="input-group" style="text-align: center; color: #555; font-size: 0.9rem;">
-                        <p>장르는 가입 후 <strong>취향 설정 페이지</strong>에서 선택할 수 있어요!</p>
-                        <br>
-                        <span class="placeholder-text">🚀 가입 완료 버튼을 눌러주세요!</span>
+                        <p>장르는 나중에도 변경할 수 있어요!</p>
                     </div>
+                    <div id="genre-container"
+                        style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:12px 0;"></div>
                     <div class="btn-group">
                         <button type="button" class="btn-secondary btn-prev">이전</button>
                         <button type="submit" class="btn-primary">가입 완료하기</button>
@@ -99,4 +101,5 @@
     <script src="./js/app.js"></script>
     <script src="./js/login.js"></script>
 </body>
+
 </html>

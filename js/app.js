@@ -1,6 +1,13 @@
 // js/app.js
 
-const BASE_URL = "http://localhost:8000";
+const BASE_URL = "https://api.animehealing.com";
+
+// 이미지 로드 실패 시 빈 투명 이미지로 대체 (broken icon 방지)
+window.onImgError = function(img) {
+    img.onerror = null;
+    img.style.background = '#2d2d44';
+    img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+};
 
 window.showToast = function (message, type = 'success', position = 'bottom-right') {
     let containerClass = `.toast-container.${position.replace(' ', '.')}`;

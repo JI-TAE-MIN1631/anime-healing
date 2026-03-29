@@ -1,5 +1,3 @@
-// js/index.js
-
 document.addEventListener('DOMContentLoaded', () => {
     const grid = document.getElementById('anime-grid');
     const spinner = document.getElementById('loading-spinner');
@@ -8,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderCards(animeList, watchlistSet = new Set()) {
         grid.innerHTML = '';
         if (!animeList || animeList.length === 0) {
-            grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">추천할 작품이 없습니다.</p>';
+            grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">추천 작품이 없습니다.</p>';
             return;
         }
 
@@ -19,11 +17,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.className = 'anime-card';
             card.addEventListener('click', (e) => {
-                if (!e.target.closest('.heart-btn')) {
-                    window.location.href = `detail.html?mal_id=${anime.mal_id}`;
-                }
+                if (!e.target.closest('.heart-btn')) { window.location.href = `detail.html?mal_id=${anime.mal_id}`; }
             });
 
+            // 장르가 리스트인지 문자열인지 방어 코드 추가
+            const genresStr = Array.isArray(anime.genres) ? anime.genres.join(', ') : '장르 정보 없음';
+            const scoreStr = anime.score ? anime.score.toFixed(1) : '0.0';
+
+            const displayTitle = anime.title_kr || anime.title;
             card.innerHTML = `
                 <div class="card-image-wrap">
                     <img src="${anime.image_url}" alt="${anime.title}" class="card-image">
@@ -32,15 +33,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     </button>
                 </div>
                 <div class="card-content">
-                    <h4 class="card-title">${anime.title}</h4>
+                    <h4 class="card-title">${displayTitle}</h4>
                     <div class="card-meta">
-                        <span class="card-score">⭐ ${anime.score.toFixed(1)}</span>
-                        <span class="card-genres">${anime.genres.join(', ')}</span>
+                        <span class="card-score">⭐ ${scoreStr}</span>
+                        <span class="card-genres">${genresStr}</span>
                     </div>
-                    <div class="ai-comment">
-                        🤖 <strong>AI 추천:</strong><br>
-                        ${anime.ai_comment || '추천 코멘트가 없습니다.'}
-                    </div>
+                    <div class="ai-comment">🤖 <strong>AI 추천:</strong><br>${anime.ai_comment || '코멘트 없음'}</div>
                 </div>
             `;
             grid.appendChild(card);
@@ -48,22 +46,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 하트(보고싶다) 버튼 클릭 로직 (기존과 동일)
         document.querySelectorAll('.heart-btn').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                const animeId = btn.dataset.id;
+            btn.addEventListener('click', async () => {
+                const animeId = parseInt(btn.dataset.id);
                 try {
-                    if (btn.classList.contains('active')) {
-                        await apiFetch(`/api/watchlist/${animeId}`, 'DELETE');
-                        btn.classList.remove('active');
-                        btn.innerText = '🤍';
-                        showToast('보고싶다 목록에서 제거되었습니다.', 'info');
+                    const response = await apiFetch('/api/watchlist', 'POST', { mal_id: animeId });
+                    if (response.data.action === "added") {
+                        btn.classList.add('active'); btn.innerText = '❤️';
+                        showToast('목록에 추가되었습니다!', 'success', 'top-center');
                     } else {
-                        await apiFetch(`/api/watchlist`, 'POST', { mal_id: animeId });
-                        btn.classList.add('active');
-                        btn.innerText = '❤️';
-                        showToast('보고싶다 목록에 추가되었습니다!', 'success');
+                        btn.classList.remove('active'); btn.innerText = '🤍';
+                        showToast('목록에서 제거되었습니다.', 'info', 'top-center');
                     }
                 } catch (error) {
-                    showToast('요청 처리에 실패했습니다.', 'error');
+                    showToast('요청 실패', 'error', 'top-center');
                 }
             });
         });
