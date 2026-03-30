@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(cp js/*.js frontend/js/)",
+      "Bash(cp css/*.css frontend/css/)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(python -c \":*)",
+      "Bash(cp c:/Users/hyunj/OneDrive/Desktop/anime-healing/css/*.css c:/Users/hyunj/OneDrive/Desktop/anime-healing/frontend/css/)",
+      "Bash(cp c:/Users/hyunj/OneDrive/Desktop/anime-healing/*.html c:/Users/hyunj/OneDrive/Desktop/anime-healing/frontend/)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\hyunj\\OneDrive\\Desktop\\anime-healing\\js",
+      "c:\\Users\\hyunj\\OneDrive\\Desktop\\anime-healing\\js"
+    ]
+  }
+}

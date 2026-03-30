@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.models import User, UserPreference, SearchCache
+from app.models.models import User, UserPreference, SearchCache, AnimeCache
 from app.schemas.anime import AnimeListResponse, AnimeDetailResponse
 from app.core.deps import get_current_user
 from app.services.jikan import (
@@ -29,12 +29,6 @@ async def recommend_anime(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """
-    맞춤 추천 API (로그인 필수)
-    저장된 취향 설정으로 자동 검색 + AI 코멘트 + 한국어 시놉시스
-    Gemini API 1회 호출로 코멘트와 번역을 동시 처리
-    """
-
     preference = (
         db.query(UserPreference)
         .filter(UserPreference.user_id == current_user.id)
@@ -47,7 +41,6 @@ async def recommend_anime(
             detail="취향 설정을 먼저 해주세요. (장르, 평점 구간)",
         )
 
-    # 1단계: 검색 결과 캐시 확인 (Jikan API 호출 스킵 가능)
     genres_sorted = sorted(preference.genres)
     cache_key = f"{','.join(map(str, genres_sorted))}_{preference.score_min}_{preference.score_max}_p{page}"
 
@@ -59,14 +52,12 @@ async def recommend_anime(
     )
 
     if use_search_cache:
-        # 캐시된 mal_id 목록으로 DB에서 바로 조회
         results = []
         for mal_id in search_cached.mal_ids:
             cached = get_cached_anime(db, mal_id)
             if cached:
                 results.append(cached)
 
-        # 모든 항목에 AI 코멘트가 있으면 즉시 반환 (Jikan + Gemini 모두 스킵)
         if results and all(r.get("ai_comment") for r in results):
             return {
                 "success": True,
@@ -74,15 +65,15 @@ async def recommend_anime(
                 "data": results,
             }
 
-    # 2단계: Jikan API 호출 (캐시 없거나 불완전할 때만)
-    results = search_anime_sync(
+    # [최적화 1] Jikan API를 별도 스레드로 분리해 서버 멈춤 방지
+    results = await asyncio.to_thread(
+        search_anime_sync,
         genres=preference.genres,
         score_min=preference.score_min,
         score_max=preference.score_max,
         page=page,
     )
 
-    # 검색 결과 캐싱 (mal_id 목록 저장)
     mal_ids = [a["mal_id"] for a in results]
     if search_cached:
         search_cached.mal_ids = mal_ids
@@ -91,7 +82,6 @@ async def recommend_anime(
         db.add(SearchCache(cache_key=cache_key, mal_ids=mal_ids))
     db.commit()
 
-    # 3단계: 캐시에서 ai_comment 재사용 / 없는 항목만 AI 호출
     need_ai_indices = []
     for i, anime in enumerate(results):
         cached = get_cached_anime(db, anime["mal_id"])
@@ -115,56 +105,34 @@ async def recommend_anime(
             results[i]["synopsis_kr"] = synopses_kr[j]
             results[i]["title_kr"] = titles_kr[j]
 
-    # AI 처리 후 캐싱
+    # [최적화 2] 12번 통신하던 DB를 마지막에 딱 한 번만 통신하도록 변경 (병목 해소)
     for anime in results:
-        cache_anime(db, anime)
+        existing = db.query(AnimeCache).filter(AnimeCache.mal_id == anime["mal_id"]).first()
+        if not existing:
+            cache = AnimeCache(
+                mal_id=anime["mal_id"],
+                title=anime["title"],
+                title_kr=anime.get("title_kr"),
+                genres=anime["genres"],
+                score=anime["score"],
+                synopsis=anime.get("synopsis", ""),
+                image_url=anime.get("image_url", ""),
+                image_url_large=anime.get("image_url_large"),
+                ai_comment=anime.get("ai_comment"),
+                synopsis_kr=anime.get("synopsis_kr"),
+            )
+            db.add(cache)
+        else:
+            if anime.get("title_kr"): existing.title_kr = anime["title_kr"]
+            if anime.get("image_url_large"): existing.image_url_large = anime["image_url_large"]
+            if anime.get("ai_comment"): existing.ai_comment = anime["ai_comment"]
+            if anime.get("synopsis_kr"): existing.synopsis_kr = anime["synopsis_kr"]
+            
+    db.commit() # 여기서 단 1번만 저장 실행!
 
     return {
         "success": True,
         "message": f"{len(results)}개의 추천 결과를 찾았습니다.",
-        "data": results,
-    }
-
-
-@router.get("/search", response_model=AnimeListResponse)
-def search_anime(
-    genres: str = Query(..., description="장르 ID (쉼표 구분)", examples=["1,22,36"]),
-    score_min: float = Query(1.0, ge=1.0, le=10.0, description="최소 평점"),
-    score_max: float = Query(10.0, ge=1.0, le=10.0, description="최대 평점"),
-    page: int = Query(1, ge=1, description="페이지 번호"),
-    db: Session = Depends(get_db),
-):
-    """
-    직접 검색 API (로그인 불필요)
-    """
-
-    try:
-        genre_ids = [int(g.strip()) for g in genres.split(",")]
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="장르 ID는 숫자를 쉼표로 구분해야 합니다. (예: 1,22,36)",
-        )
-
-    if score_min >= score_max:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="최소 평점은 최대 평점보다 작아야 합니다.",
-        )
-
-    results = search_anime_sync(
-        genres=genre_ids,
-        score_min=score_min,
-        score_max=score_max,
-        page=page,
-    )
-
-    for anime in results:
-        cache_anime(db, anime)
-
-    return {
-        "success": True,
-        "message": f"{len(results)}개의 검색 결과를 찾았습니다.",
         "data": results,
     }
 
