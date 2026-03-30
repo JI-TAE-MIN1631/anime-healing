@@ -1,7 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 
 from app.database import engine, Base
 from app.models.models import (
@@ -55,6 +57,19 @@ app.include_router(anime.router, prefix="/api")
 app.include_router(reviews.router, prefix="/api")
 app.include_router(watchlist.router, prefix="/api")
 app.include_router(profile.router, prefix="/api")
+
+
+# ===== 캐시 방지 미들웨어 =====
+# Railway 엣지 캐시가 API 응답을 캐싱하여 최신 데이터가 안 보이는 문제 방지
+class NoCacheMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response: Response = await call_next(request)
+        if request.url.path.startswith("/api"):
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["CDN-Cache-Control"] = "no-store"
+        return response
+
+app.add_middleware(NoCacheMiddleware)
 
 
 @app.get("/", tags=["서버 상태"])
