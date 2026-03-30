@@ -44,21 +44,30 @@ document.addEventListener('DOMContentLoaded', () => {
             grid.appendChild(card);
         });
 
-        // 하트(보고싶다) 버튼 클릭 로직 (기존과 동일)
+        // 하트(보고싶다) 버튼 클릭 로직 개선
         document.querySelectorAll('.heart-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (btn.disabled) return;
+                btn.disabled = true; // 연타 방지
+
                 const animeId = parseInt(btn.dataset.id);
                 try {
-                    const response = await apiFetch('/api/watchlist', 'POST', { mal_id: animeId });
-                    if (response.data.action === "added") {
-                        btn.classList.add('active'); btn.innerText = '❤️';
-                        showToast('목록에 추가되었습니다!', 'success', 'top-center');
-                    } else {
+                    if (btn.classList.contains('active')) {
+                        // 이미 찜한 상태 -> 삭제 API 호출
+                        await apiFetch(`/api/watchlist/${animeId}`, 'DELETE');
                         btn.classList.remove('active'); btn.innerText = '🤍';
                         showToast('목록에서 제거되었습니다.', 'info', 'top-center');
+                    } else {
+                        // 찜하지 않은 상태 -> 추가 API 호출
+                        await apiFetch('/api/watchlist', 'POST', { mal_id: animeId });
+                        btn.classList.add('active'); btn.innerText = '❤️';
+                        showToast('목록에 추가되었습니다!', 'success', 'top-center');
                     }
                 } catch (error) {
-                    showToast('요청 실패', 'error', 'top-center');
+                    showToast(error.message || '요청 실패', 'error', 'top-center');
+                } finally {
+                    btn.disabled = false;
                 }
             });
         });

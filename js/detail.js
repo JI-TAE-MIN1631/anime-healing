@@ -1,3 +1,32 @@
+// 커스텀 모달 팝업 함수
+function showCustomConfirm(message, onConfirm) {
+    const existingModal = document.querySelector('.modal-overlay');
+    if (existingModal) existingModal.remove();
+
+    const modalHtml = `
+        <div class="modal-overlay active">
+            <div class="modal-box">
+                <div class="modal-title">확인</div>
+                <div class="modal-body">
+                    <div class="modal-message">${message}</div>
+                </div>
+                <div class="modal-footer">
+                    <button class="modal-btn modal-btn-cancel">취소</button>
+                    <button class="modal-btn modal-btn-danger">삭제</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    const modal = document.querySelector('.modal-overlay');
+    modal.querySelector('.modal-btn-cancel').addEventListener('click', () => modal.remove());
+    modal.querySelector('.modal-btn-danger').addEventListener('click', () => {
+        modal.remove();
+        if (typeof onConfirm === 'function') onConfirm();
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const malId = new URLSearchParams(window.location.search).get('mal_id');
     if (!malId) { showToast("잘못된 접근입니다.", "error"); setTimeout(() => window.location.href = 'index.html', 1000); return; }
@@ -188,15 +217,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 삭제 버튼
         reviewList.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
+            btn.addEventListener('click', () => {
                 const reviewId = btn.dataset.id;
-                if (!confirm('리뷰를 삭제하시겠습니까?')) return;
-                try {
-                    await apiFetch(`/api/anime/${malId}/reviews/${reviewId}`, 'DELETE');
-                    showToast('리뷰가 삭제되었습니다.', 'info');
-                    loadReviews();
-                    loadReviewStats();
-                } catch (e) { showToast(e.message || '삭제 실패', 'error'); }
+                showCustomConfirm('정말 이 리뷰를 삭제하시겠습니까?', async () => {
+                    try {
+                        await apiFetch(`/api/anime/${malId}/reviews/${reviewId}`, 'DELETE');
+                        showToast('리뷰가 삭제되었습니다.', 'info');
+                        loadReviews();
+                        loadReviewStats();
+                    } catch (e) { showToast(e.message || '삭제 실패', 'error'); }
+                });
             });
         });
     }
@@ -225,6 +255,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 🚀 보고싶다 토글
     watchlistBtn.addEventListener('click', async () => {
+        if (watchlistBtn.disabled) return;
+        watchlistBtn.disabled = true; // 연타 방지
         try {
             if (watchlistBtn.classList.contains('active')) {
                 await apiFetch(`/api/watchlist/${malId}`, 'DELETE');
@@ -237,23 +269,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 watchlistBtn.innerHTML = '❤️ 보고싶다 취소';
                 showToast('목록에 담겼습니다!', 'success');
             }
-        } catch (e) { showToast('처리에 실패했습니다.', 'error'); }
+        } catch (e) { showToast(e.message || '처리에 실패했습니다.', 'error'); }
+        finally { watchlistBtn.disabled = false; }
     });
 
     // 🚀 리뷰 등록
     const reviewForm = document.getElementById('review-form');
     reviewForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const submitBtn = reviewForm.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerText = "등록 중...";
+
         const score = parseInt(document.getElementById('review-score').value);
         const content = document.getElementById('review-content').value.trim();
-        if (!content || content.length < 5) return showToast("리뷰 내용을 5자 이상 입력해주세요.", "error");
+        if (!content || content.length < 5) {
+            submitBtn.disabled = false; submitBtn.innerText = "리뷰 등록";
+            return showToast("리뷰 내용을 5자 이상 입력해주세요.", "error");
+        }
 
         try {
             await apiFetch(`/api/anime/${malId}/reviews`, 'POST', { score, content });
             showToast("리뷰가 등록되었습니다! 🎉", 'success');
             reviewForm.reset();
+
             loadReviews();
             loadReviewStats();
         } catch (error) { showToast(error.message || "리뷰 등록 실패", "error"); }
+
     });
 });
