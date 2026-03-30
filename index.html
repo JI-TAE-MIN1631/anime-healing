@@ -13,6 +13,7 @@
             <h1 class="logo">AniHealing ✨</h1>
             <nav class="nav-links">
                 <span id="user-greeting" class="greeting">환영합니다!</span>
+                <a href="mypage.html" class="nav-btn">👤 마이페이지</a>
                 <a href="preferences.html" class="nav-btn">🎨 취향 변경</a>
                 <a href="watchlist.html" class="nav-btn">❤️ 보고싶다</a>
                 <button id="logout-btn" class="nav-btn logout">로그아웃</button>
@@ -23,10 +24,8 @@
     <main class="main-container">
         <div class="filter-summary glass-panel">
             <h3>지금 적용된 맞춤 필터 🎯</h3>
-            <div class="tags-container">
-                <span class="badge score-badge">⭐ 5.0 ~ 10.0 점</span>
-                <span class="badge genre-badge">액션</span>
-                <span class="badge genre-badge">판타지</span>
+            <div id="filter-tags" class="tags-container">
+                <span class="badge score-badge">불러오는 중...</span>
             </div>
         </div>
 
@@ -37,6 +36,10 @@
 
         <div id="anime-grid" class="card-grid">
             </div>
+
+        <div id="load-more-wrap" class="hidden" style="text-align:center; margin: 30px 0;">
+            <button id="load-more-btn" class="btn-primary" style="max-width: 300px; margin: 0 auto;">더 많은 추천 보기 🔽</button>
+        </div>
     </main>
 
     <script src="./js/app.js"></script>

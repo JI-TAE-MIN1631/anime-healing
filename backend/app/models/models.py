@@ -49,6 +49,7 @@ class AnimeCache(Base):
     image_url = Column(String(500))
     image_url_large = Column(String(500), nullable=True)
     ai_comment = Column(Text, nullable=True)
+    synopsis_kr = Column(Text, nullable=True)
     cached_at = Column(DateTime, server_default=func.now())
 
 
@@ -78,6 +79,15 @@ class Watchlist(Base):
     )
     mal_id = Column(Integer, nullable=False)
     added_at = Column(DateTime, server_default=func.now())
+
+
+class SearchCache(Base):
+    __tablename__ = "search_cache"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    cache_key = Column(String(255), unique=True, nullable=False)
+    mal_ids = Column(JSON)
+    cached_at = Column(DateTime, server_default=func.now())
 
 
 class AiSummary(Base):

@@ -100,6 +100,7 @@ def cache_anime(db: Session, anime_data: dict):
             image_url=anime_data.get("image_url", ""),
             image_url_large=anime_data.get("image_url_large"),
             ai_comment=anime_data.get("ai_comment"),
+            synopsis_kr=anime_data.get("synopsis_kr"),
         )
         db.add(cache)
     else:
@@ -110,6 +111,8 @@ def cache_anime(db: Session, anime_data: dict):
             existing.image_url_large = anime_data["image_url_large"]
         if anime_data.get("ai_comment") and not existing.ai_comment:
             existing.ai_comment = anime_data["ai_comment"]
+        if anime_data.get("synopsis_kr") and not existing.synopsis_kr:
+            existing.synopsis_kr = anime_data["synopsis_kr"]
     db.commit()
 
 
@@ -130,6 +133,7 @@ def get_cached_anime(db: Session, mal_id: int) -> dict | None:
             "image_url": cached.image_url,
             "image_url_large": cached.image_url_large,
             "ai_comment": cached.ai_comment,
+            "synopsis_kr": cached.synopsis_kr,
         }
     return None
 

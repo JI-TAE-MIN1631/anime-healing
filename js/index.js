@@ -1,30 +1,44 @@
 document.addEventListener('DOMContentLoaded', () => {
     const grid = document.getElementById('anime-grid');
     const spinner = document.getElementById('loading-spinner');
+    const loadMoreWrap = document.getElementById('load-more-wrap');
+    const loadMoreBtn = document.getElementById('load-more-btn');
 
-    function renderCards(animeList) {
-        grid.innerHTML = ''; 
+    let currentPage = 1;
+    let isLoading = false;
+    let watchlistIds = new Set();
+
+    // 카드 렌더링 함수 (append: true면 기존 카드에 추가)
+    function renderCards(animeList, append = false) {
+        if (!append) grid.innerHTML = '';
+
         if (!animeList || animeList.length === 0) {
-            grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">추천 작품이 없습니다.</p>';
+            if (!append) {
+                grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">추천 작품이 없습니다.</p>';
+            }
+            loadMoreWrap.classList.add('hidden');
             return;
         }
 
         animeList.forEach(anime => {
+            const isWatchlisted = watchlistIds.has(anime.mal_id);
+
             const card = document.createElement('div');
             card.className = 'anime-card';
             card.addEventListener('click', (e) => {
                 if (!e.target.closest('.heart-btn')) { window.location.href = `detail.html?mal_id=${anime.mal_id}`; }
             });
 
-            // 장르가 리스트인지 문자열인지 방어 코드 추가
             const genresStr = Array.isArray(anime.genres) ? anime.genres.join(', ') : '장르 정보 없음';
             const scoreStr = anime.score ? anime.score.toFixed(1) : '0.0';
 
             const displayTitle = anime.title_kr || anime.title;
             card.innerHTML = `
                 <div class="card-image-wrap">
-                    <img src="${anime.image_url}" alt="${displayTitle}" class="card-image" onerror="onImgError(this)">
-                    <button class="heart-btn" data-id="${anime.mal_id}">🤍</button>
+                    <img src="${anime.image_url}" alt="${anime.title}" class="card-image">
+                    <button class="heart-btn ${isWatchlisted ? 'active' : ''}" data-id="${anime.mal_id}">
+                        ${isWatchlisted ? '❤️' : '🤍'}
+                    </button>
                 </div>
                 <div class="card-content">
                     <h4 class="card-title">${displayTitle}</h4>
@@ -38,17 +52,20 @@ document.addEventListener('DOMContentLoaded', () => {
             grid.appendChild(card);
         });
 
-        // 🚀 [API 연동] 보고싶다 토글 (백엔드가 POST 하나로 삭제/추가를 모두 처리함)
-        document.querySelectorAll('.heart-btn').forEach(btn => {
+        // 하트(보고싶다) 버튼 클릭 로직
+        grid.querySelectorAll('.heart-btn:not([data-bound])').forEach(btn => {
+            btn.setAttribute('data-bound', 'true');
             btn.addEventListener('click', async () => {
                 const animeId = parseInt(btn.dataset.id);
                 try {
                     const response = await apiFetch('/api/watchlist', 'POST', { mal_id: animeId });
                     if (response.data.action === "added") {
                         btn.classList.add('active'); btn.innerText = '❤️';
+                        watchlistIds.add(animeId);
                         showToast('목록에 추가되었습니다!', 'success', 'top-center');
                     } else {
                         btn.classList.remove('active'); btn.innerText = '🤍';
+                        watchlistIds.delete(animeId);
                         showToast('목록에서 제거되었습니다.', 'info', 'top-center');
                     }
                 } catch (error) {
@@ -56,62 +73,93 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
-    }
 
-    // 🚀 [API 연동] 필터 요약 바 업데이트
-    async function loadFilterSummary() {
-        try {
-            const [prefRes, genreRes] = await Promise.all([
-                apiFetch('/api/users/me/preferences', 'GET'),
-                apiFetch('/api/genres', 'GET'),
-            ]);
-            const prefs = prefRes.data;
-            const allGenres = genreRes.data;
-            const container = document.querySelector('.filter-summary .tags-container');
-            if (!container) return;
-
-            container.innerHTML = '';
-
-            const scoreMin = prefs.score_min != null ? prefs.score_min.toFixed(1) : '0.0';
-            const scoreMax = prefs.score_max != null ? prefs.score_max.toFixed(1) : '10.0';
-            const scoreBadge = document.createElement('span');
-            scoreBadge.className = 'badge score-badge';
-            scoreBadge.textContent = `⭐ ${scoreMin} ~ ${scoreMax} 점`;
-            container.appendChild(scoreBadge);
-
-            if (prefs.genres && prefs.genres.length > 0) {
-                const genreMap = Object.fromEntries(allGenres.map(g => [g.id, g.name]));
-                prefs.genres.forEach(id => {
-                    const badge = document.createElement('span');
-                    badge.className = 'badge genre-badge';
-                    badge.textContent = genreMap[id] || id;
-                    container.appendChild(badge);
-                });
-            }
-        } catch (e) {
-            // 취향 미설정 시 무시 (기본 하드코딩 뱃지 대신 비워둠)
-            const container = document.querySelector('.filter-summary .tags-container');
-            if (container) container.innerHTML = '<span class="badge">취향 설정을 먼저 해주세요</span>';
+        // 12개 미만이면 더 이상 데이터 없음
+        if (animeList.length < 12) {
+            loadMoreWrap.classList.add('hidden');
+        } else {
+            loadMoreWrap.classList.remove('hidden');
         }
     }
 
-    // 🚀 [API 연동] 추천 목록 가져오기
-    async function loadAnimeList() {
-        spinner.classList.remove('hidden'); 
+    // 장르 ID → 한국어 이름 매핑 (백엔드 genres.py와 동일)
+    const GENRE_MAP = {
+        1: '액션', 2: '어드벤처', 4: '코미디', 5: '아방가르드',
+        7: '미스터리', 8: '드라마', 10: '판타지', 11: '게임',
+        13: '역사', 14: '호러', 17: '무술', 18: '메카', 19: '음악',
+        22: '로맨스', 23: '학원', 24: 'SF', 25: '쇼조', 36: '일상',
+        37: '이세계', 38: '밀리터리', 39: '경찰', 40: '심리',
+        41: '스릴러', 42: '소녀', 43: '청년', 46: '수상스포츠',
+        47: '소녀(성인)', 48: '서스펜스'
+    };
+
+    // 현재 취향 설정을 백엔드에서 가져와 필터 배지 렌더링
+    async function loadFilterBadges() {
+        const filterTags = document.getElementById('filter-tags');
         try {
-            const response = await apiFetch('/api/anime/recommend', 'GET');
-            renderCards(response.data); 
+            const result = await apiFetch('/api/users/me/preferences', 'GET');
+            if (!result.data) {
+                filterTags.innerHTML = '<span class="badge score-badge">취향 설정이 없습니다. 취향 변경을 해주세요!</span>';
+                return;
+            }
+
+            const pref = result.data;
+            let html = `<span class="badge score-badge">⭐ ${pref.score_min} ~ ${pref.score_max} 점</span>`;
+
+            (pref.genres || []).forEach(genreId => {
+                const name = GENRE_MAP[genreId] || `장르#${genreId}`;
+                html += `<span class="badge genre-badge">${name}</span>`;
+            });
+
+            filterTags.innerHTML = html;
         } catch (error) {
-            if (error.message && error.message.includes('취향 설정')) {
-                showToast('취향 설정이 필요합니다. 이동합니다...', 'info', 'top-center');
-                setTimeout(() => { window.location.href = 'preferences.html'; }, 1500);
+            filterTags.innerHTML = '<span class="badge score-badge">필터 정보를 불러올 수 없습니다.</span>';
+        }
+    }
+
+    // 추천 목록 로드 (페이지 지정 가능)
+    async function loadRecommend(page = 1, append = false) {
+        if (isLoading) return;
+        isLoading = true;
+
+        if (!append) spinner.classList.remove('hidden');
+        if (append) loadMoreBtn.textContent = '불러오는 중...';
+
+        try {
+            const recommendResult = await apiFetch(`/api/anime/recommend?page=${page}`, 'GET');
+            renderCards(recommendResult.data, append);
+        } catch (error) {
+            console.error(error);
+            if (!append) {
+                showToast('데이터를 불러오지 못했습니다.', 'error');
+                grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">추천 목록을 불러올 수 없습니다.</p>';
             } else {
-                showToast(error.message || '추천 목록을 불러오지 못했습니다.', 'error', 'top-center');
+                showToast('더 이상 추천할 작품이 없습니다.', 'info');
+                loadMoreWrap.classList.add('hidden');
             }
         } finally {
-            spinner.classList.add('hidden'); 
+            spinner.classList.add('hidden');
+            loadMoreBtn.textContent = '더 많은 추천 보기 🔽';
+            isLoading = false;
         }
     }
-    loadFilterSummary();
-    loadAnimeList();
+
+    // 초기 데이터 로드
+    async function loadData() {
+        try {
+            const watchlistResult = await apiFetch('/api/watchlist', 'GET');
+            watchlistIds = new Set((watchlistResult.data || []).map(item => item.mal_id));
+        } catch (e) { /* 찜 목록 실패해도 계속 진행 */ }
+
+        await loadRecommend(1, false);
+    }
+
+    // 더 보기 버튼
+    loadMoreBtn.addEventListener('click', () => {
+        currentPage++;
+        loadRecommend(currentPage, true);
+    });
+
+    loadFilterBadges();
+    loadData();
 });
