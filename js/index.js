@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } finally {
             spinner.classList.add('hidden');
-            loadMoreBtn.textContent = '더 많은 추천 보기 🔽';
+            loadMoreBtn.textContent = '더 많은 추천 보기';
             isLoading = false;
         }
     }

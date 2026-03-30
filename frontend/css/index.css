@@ -243,6 +243,50 @@
     border-left: 3px solid var(--primary-color);
 }
 
+/* --- 더 보기 버튼 --- */
+.load-more-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 40px;
+    font-size: 1rem;
+    font-weight: 700;
+    font-family: 'Pretendard', sans-serif;
+    color: #fff;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 6px 25px rgba(106, 17, 203, 0.35);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+}
+
+.load-more-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+    border-radius: 50px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.load-more-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 35px rgba(106, 17, 203, 0.5);
+}
+
+.load-more-btn:hover::before {
+    opacity: 1;
+}
+
+.load-more-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 15px rgba(106, 17, 203, 0.3);
+}
+
 /* --- 로딩 스피너 --- */
 .loader {
     text-align: center;
