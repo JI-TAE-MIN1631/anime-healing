@@ -135,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 password: suPw,
                 password_confirm: suPw,
                 nickname: nickname,
-                email: `${suId}@anihealing.com`,
+
                 gender: gender,
                 age_group: ageGroup,
                 genres: selectedGenres

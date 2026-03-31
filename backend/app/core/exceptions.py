@@ -59,7 +59,7 @@ def translate_validation_error(field: str, error_type: str, error_msg: str, ctx:
     # 필드명 한국어 매핑
     field_names = {
         "username": "아이디",
-        "email": "이메일",
+
         "nickname": "닉네임",
         "password": "비밀번호",
         "password_confirm": "비밀번호 확인",
